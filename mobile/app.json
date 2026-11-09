@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "KixCleen Monitor",
+    "slug": "kixcleen-monitor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "kixcleenmonitor",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kixcleen.monitor"
+    },
+    "android": {
+      "package": "com.kixcleen.monitor",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B132B"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-notifications"
+    ]
+  }
+}
