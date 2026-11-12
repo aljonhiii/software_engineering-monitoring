@@ -1,4 +1,11 @@
-import { getDbConnection, memoryStore } from '../config/db.js';
+import {
+  getDbConnection,
+  memoryStore,
+  normalizeShoeType,
+  normalizeServiceTier,
+  normalizeServiceName,
+  normalizeAddons,
+} from '../config/db.js';
 import { broadcastNewTransaction, broadcastTransactionUpdate, broadcastStatsUpdate } from '../services/socket.js';
 import { sendPushNotification } from '../services/notificationService.js';
 
@@ -66,10 +73,10 @@ export async function getAllTransactions(req, res) {
       id: t.id,
       orderId: t.order_id,
       kioskId: t.kiosk_id,
-      shoeType: t.shoe_type,
-      serviceTier: t.service_tier,
-      serviceName: t.service_name,
-      addons: typeof t.addons === 'string' ? JSON.parse(t.addons || '[]') : t.addons || [],
+      shoeType: normalizeShoeType(t.shoe_type),
+      serviceTier: normalizeServiceTier(t.service_tier, t.service_name),
+      serviceName: normalizeServiceName(t.service_name, t.service_tier),
+      addons: normalizeAddons(t.addons),
       basePrice: Number(t.base_price),
       addonsPrice: Number(t.addons_price),
       totalAmount: Number(t.total_amount),
@@ -120,10 +127,10 @@ export async function getTransactionById(req, res) {
       kioskId: transaction.kiosk_id,
       kioskName: transaction.kiosk_name || 'KixCleen Vendo #1',
       kioskLocation: transaction.kiosk_location || 'Ground Floor Lobby',
-      shoeType: transaction.shoe_type,
-      serviceTier: transaction.service_tier,
-      serviceName: transaction.service_name,
-      addons: typeof transaction.addons === 'string' ? JSON.parse(transaction.addons || '[]') : transaction.addons || [],
+      shoeType: normalizeShoeType(transaction.shoe_type),
+      serviceTier: normalizeServiceTier(transaction.service_tier, transaction.service_name),
+      serviceName: normalizeServiceName(transaction.service_name, transaction.service_tier),
+      addons: normalizeAddons(transaction.addons),
       basePrice: Number(transaction.base_price),
       addonsPrice: Number(transaction.addons_price),
       totalAmount: Number(transaction.total_amount),
@@ -155,12 +162,15 @@ export async function createTransaction(req, res) {
 
     const txId = payload.id || `TX-${Date.now()}`;
     const kioskId = payload.kioskId || payload.kiosk_id || 'KIOSK-01-MAIN';
-    const shoeType = payload.shoeType?.name || payload.shoeType || 'Sneakers';
-    const serviceTier = payload.service?.id || payload.serviceTier || 'standard';
-    const serviceName = payload.service?.name || payload.serviceName || 'Standard Clean';
-    const addonsJson = JSON.stringify(payload.addons || []);
+    const shoeType = normalizeShoeType(payload.shoeType || payload.shoe_type || 'Other Shoes');
+    const rawTier = payload.service?.id || payload.serviceTier || payload.service_tier || 'sanitation';
+    const rawName = payload.service?.name || payload.serviceName || payload.service_name || 'Sanitation';
+    const serviceTier = normalizeServiceTier(rawTier, rawName);
+    const serviceName = normalizeServiceName(rawName, rawTier);
+    const normalizedAddonsList = normalizeAddons(payload.addons || []);
+    const addonsJson = JSON.stringify(normalizedAddonsList);
     const basePrice = Number(payload.service?.price || payload.basePrice || payload.totalAmount || 0);
-    const addonsPrice = (payload.addons || []).reduce((acc, a) => acc + Number(a.price || 0), 0);
+    const addonsPrice = normalizedAddonsList.reduce((acc, a) => acc + Number(a.price || 0), 0);
     const totalAmount = Number(payload.totalAmount || payload.totalPrice || basePrice + addonsPrice);
     let paymentMethod = (payload.paymentMethod || 'cash').toLowerCase();
     if (paymentMethod === 'ewallet') {

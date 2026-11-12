@@ -1,158 +1,180 @@
-# 👟 KixCleen Monitoring & Telemetry Platform
+# KixCleen Monitoring System — Backend API & Owner/Admin Mobile App (`version-2`)
 
-A modern, real-time fleet operations and telemetry monitoring system built for **KixCleen Automated Shoe Cleaning Kiosks**. 
+Welcome to the **KixCleen Monitoring System** repository (`https://github.com/aljonhiii/software_engineering-monitoring.git`).
 
-This system allows kiosk owners, floor operators, and managers to monitor live machine telemetry (ESP32 controllers, door locks, liquid water & foam reservoirs), track verified order revenues across GCash, Maya, and Cash, view 7-day revenue analytics, and receive real-time push notifications.
-
----
-
-## 🏗️ System Architecture
-
-```mermaid
-flowchart LR
-    Kiosk["👟 ShoeClean Kiosk App\n(React Native / Tablet)\nhttp://localhost:8082"] -->|1. Transmit Orders & Telemetry| Backend["⚡ KixCleen Monitoring Server\n(Express.js + Socket.IO)\nhttp://localhost:3000"]
-    Backend -->|2. Database / In-Memory| DB[(MySQL / Memory Store)]
-    Backend -->|3. Real-Time WebSocket Push| Mobile["📱 KixCleen Monitoring Mobile App\n(Operator Console)\nhttp://localhost:8081"]
-```
-
-- **Mobile Monitoring App** (`/mobile`): React Native (Expo SDK 58, Expo Router, TypeScript). Featuring a modern smoke-gray capsule bottom navigation bar (with 2x3 overflow dot grid), top notification popover, dark settlement hero card, 7-day revenue bar charts, and real-time Socket.IO listeners.
-- **Backend API & Real-time Hub** (`/backend`): Node.js, Express.js, Socket.IO, JWT Authentication.
-- **Kiosk Client (`shoeclean`)**: Customer-facing touch vending application that records orders and broadcasts hardware heartbeats directly to this monitoring server.
+This repository contains two folders:
+1. **`backend/`** — Node.js + Express.js REST API + Socket.IO Real-Time Server + MariaDB/MySQL (with automatic in-memory fallback).
+2. **`mobile/`** — React Native (Expo SDK 58) Android Monitoring Application for **Owner** and **Administrator** roles.
 
 ---
 
-## 🚀 Quick Setup & Installation
+## 🌿 Repository Branches (Version 1 vs. Version 2)
 
-### 1. Prerequisites
-- **Node.js**: v18.x or v20.x installed ([Download Node.js](https://nodejs.org/))
-- **npm** (included with Node.js)
-- **Expo Go** app on your phone (if running on a physical Android or iOS device) or browser for web testing.
-- Optional: MySQL / MariaDB (a zero-config in-memory database is built-in and works out-of-the-box).
+| Branch | Description |
+| :--- | :--- |
+| **`main`** | **Version 1** — Initial Monitoring Backend & Mobile App aligned with the original 6 shoe types and 3 cleaning tiers. |
+| **`version-2`** | **Version 2 (Current)** — Synchronized with the Version 2 Kiosk workflow: standardized **Leather Shoes** and **Other Shoes** categories, **Sanitation**, **Disinfection**, and **Deodorize** services, and separate **UV Light Bacterial Removal** and **Dryer** add-ons. |
 
----
-
-### 2. Start the Monitoring Backend API
-
-Open your terminal:
-
+To switch between versions on your laptop/PC:
 ```bash
-cd backend
-npm install
-npm run dev
+# View Version 1
+git checkout main
+
+# View Version 2
+git checkout version-2
 ```
-
-The backend server will run on:
-- **Local API**: `http://localhost:3000/api`
-- **Socket.IO Server**: `http://localhost:3000`
-
-> 💡 **Database Note**: If MySQL is not detected, the backend automatically uses an active in-memory store pre-seeded with operator accounts, kiosk chambers, and sample transactions.
 
 ---
 
-### 3. Start the Monitoring Mobile App
+## 🌐 Do You Need an Internet Connection?
 
-In a second terminal:
-
-```bash
-cd mobile
-npm install
-npx expo start
-```
-
-Press:
-- `a` — Open in Android emulator or connected device via ADB
-- `i` — Open in iOS simulator
-- `w` — Open in Web browser (Chrome / Edge)
-- Or scan the QR code using the **Expo Go** app on your physical phone!
+| Component / Action | Internet Needed? | Network Requirement |
+| :--- | :--- | :--- |
+| **Local Monitoring (Backend + Mobile App + Kiosk Sync)** | ❌ **No internet required** | All devices (your laptop/PC running `backend/`, the Kiosk tablet/phone, and the Owner/Admin phone running `mobile/`) only need to be connected to the **same Wi-Fi router or mobile phone hotspot**. |
+| **Database Storage (MariaDB / XAMPP or Memory Fallback)** | ❌ **No internet required** | Runs 100% locally on your laptop/PC. |
+| **First-time `npm install` or Expo Push Notifications** | ✅ **Yes, internet required** | Needed when installing packages for the first time or sending cloud push notifications via Expo's push service. |
 
 ---
 
-## 🔗 How to Connect KixCleen Monitoring to `shoeclean`
+## 🔍 Step-by-Step: How to Get Your PC / Laptop IPv4 Address
 
-The customer kiosk app (`shoeclean`) and this monitoring system communicate seamlessly over local network HTTP and WebSockets.
+Because the **KixCleen Monitor Mobile App** and the **KixCleen Kiosk App** connect to the `backend/` server running on your computer, you need your computer's local **IPv4 Address**.
 
-### Step 1: Configure `shoeclean` Environment
+### 1. Find Your IPv4 Address
+- **On Windows**:
+  1. Open **Command Prompt (`cmd`)** or **PowerShell**.
+  2. Type `ipconfig` and press **Enter**.
+  3. Find **Wireless LAN adapter Wi-Fi** → **IPv4 Address** (for example: `192.168.1.15`).
+- **On macOS / Linux**:
+  1. Open **Terminal** and run `ifconfig | grep inet` (or `ip addr`).
+- **Automatic Tip**:
+  When you run `npm start` or `npm run dev` inside `backend/`, the server automatically prints your PC's IPv4 address in the console:
+  ```text
+  ========================================================
+  🚀 KixCleen Monitor Backend API running on port 3000
+  --------------------------------------------------------
+  📍 Localhost:     http://localhost:3000
+  📱 Local Network: http://192.168.1.15:3000
+  ========================================================
+  ```
 
-In your `shoeclean` project root, make sure `.env` points to the monitoring server:
+---
 
+## ⚙️ Where to Put the IP Address
+
+You will put your PC's IPv4 address (e.g., `192.168.1.15`) in **two places** if you are running both the Monitoring Mobile App and the Customer Kiosk App:
+
+### Location 1: Monitoring Mobile App (`mobile/.env`)
+1. Go to the `mobile/` folder (`kixcleen_monitoring/mobile`).
+2. Copy `.env.example` to a new file named **`.env`**:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit `mobile/.env` and replace `192.168.1.15` with your laptop/PC's IPv4 address:
+   ```env
+   EXPO_PUBLIC_API_URL=http://192.168.1.15:3000/api
+   EXPO_PUBLIC_SOCKET_URL=http://192.168.1.15:3000
+   ```
+   *(Note: `mobile/src/constants/config.ts` reads `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_SOCKET_URL`. Always restart Expo with `npx expo start -c` after editing `.env`.)*
+
+### Location 2: Customer Kiosk App (`shoeclean/.env`)
+In the KixCleen Customer Kiosk repository (`shoeclean/.env`), set `EXPO_PUBLIC_MONITOR_API_URL` to the same IPv4 address:
 ```env
-# shoeclean/.env
-EXPO_PUBLIC_MONITOR_API_URL=http://localhost:3000/api
+EXPO_PUBLIC_MONITOR_API_URL=http://192.168.1.15:3000/api
 EXPO_PUBLIC_KIOSK_ID=KIOSK-01-MAIN
 ```
 
-> 📲 **Testing on Physical Devices over Local Wi-Fi**:
-> If running either app on a physical phone/tablet connected to the same Wi-Fi, replace `localhost` with your computer's local IP address (e.g. `192.168.1.15`):
-> ```env
-> EXPO_PUBLIC_MONITOR_API_URL=http://192.168.1.15:3000/api
-> ```
-> And in `mobile/.env`:
-> ```env
-> EXPO_PUBLIC_API_URL=http://192.168.1.15:3000/api
-> EXPO_PUBLIC_SOCKET_URL=http://192.168.1.15:3000
-> ```
+---
+
+## 🚀 Full Setup Guide for Teammates
+
+### Part 1: Set Up & Run the Backend Server (`backend/`)
+
+1. **Clone the repository and checkout `version-2`**:
+   ```bash
+   git clone https://github.com/aljonhiii/software_engineering-monitoring.git
+   cd software_engineering-monitoring
+   git checkout version-2
+   ```
+
+2. **Install backend dependencies**:
+   ```bash
+   cd backend
+   npm install
+   ```
+
+3. **Configure `backend/.env` (Optional)**:
+   ```bash
+   cp .env.example .env
+   ```
+   Default values in `backend/.env`:
+   ```env
+   PORT=3000
+   JWT_SECRET=kixcleen_super_secret_jwt_key_2026
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=kixcleen_db
+   ```
+
+4. **Database Setup (MariaDB / XAMPP — Optional!)**:
+   - **Zero-Config Fallback**: If you do **not** have MariaDB/XAMPP installed or running, the backend **automatically falls back to an in-memory store** pre-loaded with sample Version 2 transactions (`Leather Shoes` & `Other Shoes`, `Sanitation`, `Disinfection`, `Deodorize`, and `UV Light Bacterial Removal` / `Dryer` add-ons) and user accounts.
+   - **If Using MariaDB / XAMPP**:
+     1. Start MySQL/MariaDB in XAMPP Control Panel.
+     2. Open phpMyAdmin (`http://localhost/phpmyadmin`) or the MySQL CLI.
+     3. Create a database named `kixcleen_db`.
+     4. Import `backend/database/schema.sql` first, then `backend/database/seed.sql`.
+
+5. **Start the backend server**:
+   ```bash
+   npm run dev
+   ```
+   Leave this terminal open while testing!
 
 ---
 
-### Step 2: Start `shoeclean`
+### Part 2: Set Up & Run the Monitoring Mobile App (`mobile/`)
 
-In a third terminal:
+1. **Open a second terminal and navigate to `mobile/`**:
+   ```bash
+   cd mobile
+   npm install
+   ```
 
-```bash
-cd c:\Users\PEKTO_Song\Desktop\shoeclean
-npm install
-npx expo start
-```
+2. **Create `mobile/.env` and set your PC's IPv4 address**:
+   ```bash
+   cp .env.example .env
+   ```
+   Update `mobile/.env`:
+   ```env
+   EXPO_PUBLIC_API_URL=http://<YOUR_PC_IPV4>:3000/api
+   EXPO_PUBLIC_SOCKET_URL=http://<YOUR_PC_IPV4>:3000
+   ```
+
+3. **Start the Expo development server**:
+   ```bash
+   npx expo start -c
+   ```
+   - Press **`w`** to open in the web browser, **`a`** for Android Emulator, or scan the QR code with **Expo Go** on your Android phone.
 
 ---
 
-### Step 3: Test the Live Connection
+## 🔐 Default Login Credentials
 
-1. On the **`shoeclean` kiosk**:
-   - Pick a shoe type (e.g. *Sneakers*) and service (e.g. *Deep Clean - ₱150*).
-   - Select payment (Cash, GCash, or Maya).
-   - Simulate or complete the payment.
-2. Observe the **KixCleen Monitoring App**:
-   - **Instant Notification**: A live order notification popover updates immediately.
-   - **Revenue Update**: Today's Settled Revenue increases in real-time.
-   - **Recent Orders**: The new order `#KIX-YYYYMMDD-XXXX` appears automatically at the top of the 6 recent orders list!
-   - **Cleaning Cycle & Door Status**: As the kiosk transitions into the wash cycle, the Chamber Door lock status turns **Locked**, and the live activity shows the cleaning step percentage!
+Use these accounts on the KixCleen Monitor login screen:
 
----
-
-## 🔐 Operator Login Credentials
-
-Log in to the monitoring app with either of these accounts:
-
-| Role | Username | Password | Privileges |
+| Role | Username / Email | Password | Access Level |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `admin1234` | Live orders, machine refill telemetry, door unlock controls |
-| **Owner** | `owner` | `admin1234` | Full financial settlements, revenue channels, reports & analytics |
+| **Owner** | `owner` *(or `owner@kixcleen.com`)* | `admin1234` | Full access to Dashboard, Transactions, Payments, Sales & Analytics, Machine Status, and Account Settings. |
+| **Administrator** | `admin` *(or `admin@kixcleen.com`)* | `admin1234` | Operational monitoring access to Dashboard, Transactions, Payments, Sales Reports, and Machine Status. |
 
 ---
 
-## 📱 Navigation & Features
+## 🛠️ Troubleshooting Common Network Issues
 
-- **Dashboard**:
-  - Unified header with top-anchored live notification popover.
-  - Dark settlement hero card showing today's collected volume and breakdowns.
-  - Live reservoir pills (Water %, Soap %, Chamber Door status).
-  - 7-day revenue trend bar chart.
-  - Recent orders stream (displays the latest 6 transactions).
-- **Orders (`/transactions`)**: Search, filter, and audit all incoming kiosk transactions with receipt breakdowns.
-- **Payments (`/payments`)**: Settlement ledger by payment channel (GCash, Maya, Cash slots).
-- **Telemetry (`/machine`)**: Detailed ESP32 diagnostics, chamber controls, and reservoir refills.
-- **Bottom Navigation**: Custom matte smoke-gray capsule with a **2x3 horizontal six-dot grid** overflow button that opens **Reports & Analytics** and **Settings**.
-
----
-
-## 🛠️ Hardware Simulation Scripts
-
-To test live telemetry and simulate vending machine sensor updates without running the physical kiosk hardware:
-
-```bash
-cd backend
-npm run simulate
-```
-
-This simulates random sensor heartbeats, reservoir depletion, and automated kiosk orders over Socket.IO.
+1. **Phone cannot connect to `http://<YOUR_PC_IP>:3000` ("Connection timed out")**:
+   - Make sure your laptop/PC and your phone are connected to the **same Wi-Fi network** (not a guest network with client isolation).
+   - Check if **Windows Defender Firewall** is blocking Node.js on port `3000` — allow Node.js on Private/Public networks when prompted, or test with `http://<YOUR_PC_IP>:3000/health` in your phone's browser. If it shows `{"status":"ok",...}`, your phone can reach your PC!
+2. **Changed Wi-Fi network or hotspot**:
+   - Run `ipconfig` again to check if your PC's IPv4 address changed, update `.env`, and restart Expo with `npx expo start -c`.

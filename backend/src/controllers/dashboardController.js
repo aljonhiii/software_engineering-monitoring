@@ -1,4 +1,9 @@
-import { getDbConnection, memoryStore } from '../config/db.js';
+import {
+  getDbConnection,
+  memoryStore,
+  normalizeShoeType,
+  normalizeServiceName,
+} from '../config/db.js';
 
 export async function getDashboardStats(req, res) {
   try {
@@ -44,8 +49,8 @@ export async function getDashboardStats(req, res) {
     const recentTransactions = allTransactions.slice(0, 5).map((t) => ({
       id: t.id,
       orderId: t.order_id,
-      shoeType: t.shoe_type,
-      serviceName: t.service_name,
+      shoeType: normalizeShoeType(t.shoe_type),
+      serviceName: normalizeServiceName(t.service_name, t.service_tier),
       totalAmount: Number(t.total_amount),
       paymentMethod: t.payment_method,
       paymentStatus: t.payment_status,

@@ -1,4 +1,9 @@
-import { getDbConnection, memoryStore } from '../config/db.js';
+import {
+  getDbConnection,
+  memoryStore,
+  normalizeShoeType,
+  normalizeServiceName,
+} from '../config/db.js';
 
 export async function getSalesReports(req, res) {
   try {
@@ -40,17 +45,17 @@ export async function getSalesReports(req, res) {
     const chartLabels = Object.values(daysMap).map((d) => d.label);
     const chartData = Object.values(daysMap).map((d) => d.revenue);
 
-    // 2. Shoe type breakdown
+    // 2. Shoe type breakdown (standardized to Leather Shoes & Other Shoes)
     const shoeTypeStats = {};
     allTransactions.forEach((t) => {
-      const type = t.shoe_type || 'Other';
+      const type = normalizeShoeType(t.shoe_type);
       shoeTypeStats[type] = (shoeTypeStats[type] || 0) + 1;
     });
 
-    // 3. Service breakdown
+    // 3. Service breakdown (standardized to Sanitation, Disinfection, Deodorize)
     const serviceStats = {};
     allTransactions.forEach((t) => {
-      const service = t.service_name || 'Standard';
+      const service = normalizeServiceName(t.service_name, t.service_tier);
       serviceStats[service] = (serviceStats[service] || 0) + 1;
     });
 

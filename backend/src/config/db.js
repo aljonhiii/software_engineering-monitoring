@@ -6,6 +6,87 @@ dotenv.config();
 let pool = null;
 let isDbConnected = false;
 
+// Standardized shoe category helper ('Leather Shoes' | 'Other Shoes')
+export function normalizeShoeType(rawType) {
+  if (!rawType) return 'Other Shoes';
+  const val = typeof rawType === 'object' ? rawType.name || rawType.id || '' : String(rawType);
+  const lower = val.trim().toLowerCase();
+  if (lower.includes('leather')) {
+    return 'Leather Shoes';
+  }
+  return 'Other Shoes';
+}
+
+// Standardized service tier helper ('sanitation' | 'disinfection' | 'deodorize')
+export function normalizeServiceTier(rawTier, rawName) {
+  const combined = `${rawTier || ''} ${rawName || ''}`.trim().toLowerCase();
+  if (combined.includes('disinfect') || combined.includes('deep')) {
+    return 'disinfection';
+  }
+  if (combined.includes('deodor')) {
+    return 'deodorize';
+  }
+  return 'sanitation';
+}
+
+// Standardized service name helper ('Sanitation' | 'Disinfection' | 'Deodorize')
+export function normalizeServiceName(rawName, rawTier) {
+  const tier = normalizeServiceTier(rawTier, rawName);
+  switch (tier) {
+    case 'disinfection':
+      return 'Disinfection';
+    case 'deodorize':
+      return 'Deodorize';
+    case 'sanitation':
+    default:
+      return 'Sanitation';
+  }
+}
+
+// Standardized add-ons helper ('UV Light Bacterial Removal' & 'Dryer')
+export function normalizeAddons(rawAddons) {
+  let list = [];
+  if (typeof rawAddons === 'string') {
+    try {
+      list = JSON.parse(rawAddons || '[]');
+    } catch {
+      list = [];
+    }
+  } else if (Array.isArray(rawAddons)) {
+    list = rawAddons;
+  }
+
+  const normalized = [];
+  for (const addon of list) {
+    const rawName = String(addon.name || addon.id || '').toLowerCase();
+    if (rawName.includes('uv') && rawName.includes('dryer')) {
+      normalized.push({
+        id: 'uv-bacterial',
+        name: 'UV Light Bacterial Removal',
+        price: 25,
+      });
+      normalized.push({
+        id: 'dryer',
+        name: 'Dryer',
+        price: 20,
+      });
+    } else if (rawName.includes('dryer')) {
+      normalized.push({
+        id: 'dryer',
+        name: 'Dryer',
+        price: Number(addon.price || 20),
+      });
+    } else {
+      normalized.push({
+        id: 'uv-bacterial',
+        name: 'UV Light Bacterial Removal',
+        price: Number(addon.price || 25),
+      });
+    }
+  }
+  return normalized;
+}
+
 // Active memory store for development fallback
 export const memoryStore = {
   users: [
@@ -49,13 +130,16 @@ export const memoryStore = {
       id: 'TX-1001',
       order_id: 'KIX-20261109-1001',
       kiosk_id: 'KIOSK-01-MAIN',
-      shoe_type: 'Sneakers',
-      service_tier: 'deep',
-      service_name: 'Deep Clean',
-      addons: JSON.stringify([{ name: 'Anti-Bacterial Deodorizer', price: 30 }]),
-      base_price: 120.0,
-      addons_price: 30.0,
-      total_amount: 150.0,
+      shoe_type: 'Other Shoes',
+      service_tier: 'disinfection',
+      service_name: 'Disinfection',
+      addons: JSON.stringify([
+        { id: 'uv-bacterial', name: 'UV Light Bacterial Removal', price: 25 },
+        { id: 'dryer', name: 'Dryer', price: 20 },
+      ]),
+      base_price: 50.0,
+      addons_price: 45.0,
+      total_amount: 95.0,
       payment_method: 'gcash',
       payment_status: 'paid',
       payment_ref: 'xnd_inv_89324',
@@ -68,13 +152,13 @@ export const memoryStore = {
       id: 'TX-1002',
       order_id: 'KIX-20261109-1002',
       kiosk_id: 'KIOSK-01-MAIN',
-      shoe_type: 'Sports / Running',
-      service_tier: 'quick',
-      service_name: 'Quick Clean',
-      addons: JSON.stringify([]),
-      base_price: 80.0,
-      addons_price: 0.0,
-      total_amount: 80.0,
+      shoe_type: 'Other Shoes',
+      service_tier: 'sanitation',
+      service_name: 'Sanitation',
+      addons: JSON.stringify([{ id: 'dryer', name: 'Dryer', price: 20 }]),
+      base_price: 30.0,
+      addons_price: 20.0,
+      total_amount: 50.0,
       payment_method: 'cash',
       payment_status: 'paid',
       payment_ref: 'cash_bill_0918',
@@ -87,13 +171,13 @@ export const memoryStore = {
       id: 'TX-1003',
       order_id: 'KIX-20261109-1003',
       kiosk_id: 'KIOSK-01-MAIN',
-      shoe_type: 'Leather / Formal',
-      service_tier: 'standard',
-      service_name: 'Standard Clean',
-      addons: JSON.stringify([{ name: 'Water-Repellent Nano Coating', price: 50 }]),
-      base_price: 100.0,
-      addons_price: 50.0,
-      total_amount: 150.0,
+      shoe_type: 'Leather Shoes',
+      service_tier: 'deodorize',
+      service_name: 'Deodorize',
+      addons: JSON.stringify([{ id: 'uv-bacterial', name: 'UV Light Bacterial Removal', price: 25 }]),
+      base_price: 40.0,
+      addons_price: 25.0,
+      total_amount: 65.0,
       payment_method: 'maya',
       payment_status: 'paid',
       payment_ref: 'xnd_inv_99411',
