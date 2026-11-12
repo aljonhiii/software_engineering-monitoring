@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { LoadingView } from '../../../components/common/LoadingView';
 export default function MachineScreen() {
   const { socket } = useSocket();
   const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
+  const [selectedKioskId, setSelectedKioskId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -29,6 +31,11 @@ export default function MachineScreen() {
       const res = await getMachineStatusApi();
       if (res.success && res.kiosks) {
         setKiosks(res.kiosks);
+        if (res.kiosks.length > 0) {
+          setSelectedKioskId((prev) =>
+            prev && res.kiosks.some((k) => k.id === prev) ? prev : res.kiosks[0].id
+          );
+        }
       }
     } catch (err: any) {
       console.warn('[Machine] Fetch error:', err.message);
@@ -42,7 +49,7 @@ export default function MachineScreen() {
     fetchMachineStatus();
   }, [fetchMachineStatus]);
 
-  // Realtime Socket listener
+  // Realtime Socket listener (only updates kiosks in buyer's authorized list)
   useEffect(() => {
     if (!socket) return;
 
@@ -67,13 +74,14 @@ export default function MachineScreen() {
     return <LoadingView message="Connecting to machine telemetry..." />;
   }
 
-  const primary = kiosks[0];
+  const primary =
+    kiosks.find((k) => k.id === selectedKioskId) || kiosks[0] || null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScreenHeader
         title="Machine Telemetry"
-        subtitle="ESP32 hardware controller & sensors"
+        subtitle={`Assigned kiosks (${kiosks.length}) & ESP32 sensors`}
         onRefresh={onRefresh}
         isRefreshing={refreshing}
       />
@@ -89,6 +97,57 @@ export default function MachineScreen() {
           />
         }
       >
+        {/* Multi-Kiosk Selector Bar when Buyer owns multiple kiosks */}
+        {kiosks.length > 1 && (
+          <View style={styles.selectorWrapper}>
+            <Text style={styles.selectorLabel}>
+              ASSIGNED KIOSK UNITS ({kiosks.length})
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.selectorRow}
+            >
+              {kiosks.map((k) => {
+                const isSelected = primary?.id === k.id;
+                return (
+                  <TouchableOpacity
+                    key={k.id}
+                    style={[
+                      styles.kioskChip,
+                      isSelected && styles.kioskChipActive,
+                    ]}
+                    onPress={() => setSelectedKioskId(k.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.chipDot,
+                        {
+                          backgroundColor:
+                            k.status === 'online'
+                              ? '#10B981'
+                              : k.status === 'busy'
+                              ? '#3B82F6'
+                              : '#94A3B8',
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.kioskChipText,
+                        isSelected && styles.kioskChipTextActive,
+                      ]}
+                    >
+                      {k.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {primary ? (
           <>
             {/* Machine Status Hero Card */}
@@ -96,7 +155,11 @@ export default function MachineScreen() {
               <View style={styles.heroTop}>
                 <View style={styles.heroTitleCol}>
                   <Text style={styles.kioskName}>{primary.name}</Text>
-                  <Text style={styles.kioskLoc}>{primary.location}</Text>
+                  <Text style={styles.kioskLoc}>
+                    {primary.address
+                      ? `${primary.address}${primary.city ? `, ${primary.city}` : ''}`
+                      : primary.location}
+                  </Text>
                 </View>
                 <StatusBadge status={primary.status} type="machine" size="md" />
               </View>
@@ -229,6 +292,12 @@ export default function MachineScreen() {
                 <Text style={styles.specLabel}>Telemetry Protocol</Text>
                 <Text style={styles.specVal}>REST + WebSocket Heartbeat</Text>
               </View>
+              {primary.city ? (
+                <View style={styles.specLine}>
+                  <Text style={styles.specLabel}>Registered City</Text>
+                  <Text style={styles.specVal}>{primary.city}</Text>
+                </View>
+              ) : null}
               <View style={[styles.specLine, { borderBottomWidth: 0 }]}>
                 <Text style={styles.specLabel}>Assigned Kiosk ID</Text>
                 <Text style={[styles.specVal, styles.monoVal]}>
@@ -238,7 +307,11 @@ export default function MachineScreen() {
             </Card>
           </>
         ) : (
-          <Text style={styles.emptyText}>No kiosks registered.</Text>
+          <Card style={styles.card}>
+            <Text style={styles.emptyText}>
+              No kiosks are currently assigned to your buyer account. Please contact the KixCleen Super Admin to assign your kiosk unit.
+            </Text>
+          </Card>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -253,6 +326,49 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: 110,
+  },
+  selectorWrapper: {
+    marginBottom: Spacing.md,
+  },
+  selectorLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  selectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  kioskChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.pill,
+    ...Shadows.small,
+  },
+  kioskChipActive: {
+    backgroundColor: '#121316',
+    borderColor: '#121316',
+  },
+  chipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  kioskChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  kioskChipTextActive: {
+    color: '#FFFFFF',
   },
   heroCard: {
     padding: Spacing.lg,
@@ -271,6 +387,7 @@ const styles = StyleSheet.create({
   },
   heroTitleCol: {
     flex: 1,
+    paddingRight: 8,
   },
   kioskName: {
     fontSize: 16,
@@ -443,5 +560,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginVertical: Spacing.xl,
+    lineHeight: 19,
   },
 });

@@ -1,24 +1,71 @@
 import {
   getDbConnection,
   memoryStore,
+  saveMemoryStore,
   normalizeShoeType,
   normalizeServiceTier,
   normalizeServiceName,
   normalizeAddons,
+  getAuthorizedKioskIdsForUser,
 } from '../config/db.js';
-import { broadcastNewTransaction, broadcastTransactionUpdate, broadcastStatsUpdate } from '../services/socket.js';
+import { broadcastNewTransaction, broadcastTransactionUpdate } from '../services/socket.js';
 import { sendPushNotification } from '../services/notificationService.js';
 
 export async function getAllTransactions(req, res) {
   try {
-    const { paymentStatus, cleaningStatus, search, limit = 50, page = 1 } = req.query;
-    const db = await getDbConnection();
+    const {
+      paymentStatus,
+      cleaningStatus,
+      kioskId,
+      search,
+      limit = 50,
+      page = 1,
+    } = req.query;
 
+    const authorizedKioskIds = await getAuthorizedKioskIdsForUser(req.user);
+
+    if (
+      kioskId &&
+      authorizedKioskIds !== null &&
+      !authorizedKioskIds.includes(String(kioskId))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied. You are not authorized to access transactions for this kiosk.',
+      });
+    }
+
+    // If buyer has 0 assigned kiosks, immediately return empty
+    if (authorizedKioskIds !== null && authorizedKioskIds.length === 0) {
+      return res.json({
+        success: true,
+        count: 0,
+        transactions: [],
+      });
+    }
+
+    const db = await getDbConnection();
     let transactions = [];
+    let kiosksMap = {};
 
     if (db) {
+      const [kRows] = await db.query('SELECT id, name, location, city, address FROM kiosks');
+      kRows.forEach((k) => {
+        kiosksMap[k.id] = k;
+      });
+
       let query = 'SELECT * FROM transactions WHERE 1=1';
       const params = [];
+
+      if (authorizedKioskIds !== null) {
+        query += ` AND kiosk_id IN (${authorizedKioskIds.map(() => '?').join(',')})`;
+        params.push(...authorizedKioskIds);
+      }
+
+      if (kioskId) {
+        query += ' AND kiosk_id = ?';
+        params.push(String(kioskId));
+      }
 
       if (paymentStatus && paymentStatus !== 'all') {
         query += ' AND payment_status = ?';
@@ -44,14 +91,29 @@ export async function getAllTransactions(req, res) {
       const [rows] = await db.query(query, params);
       transactions = rows;
     } else {
+      memoryStore.kiosks.forEach((k) => {
+        kiosksMap[k.id] = k;
+      });
       transactions = [...memoryStore.transactions];
 
+      if (authorizedKioskIds !== null) {
+        transactions = transactions.filter((t) => authorizedKioskIds.includes(t.kiosk_id));
+      }
+
+      if (kioskId) {
+        transactions = transactions.filter((t) => t.kiosk_id === String(kioskId));
+      }
+
       if (paymentStatus && paymentStatus !== 'all') {
-        transactions = transactions.filter((t) => t.payment_status.toLowerCase() === paymentStatus.toLowerCase());
+        transactions = transactions.filter(
+          (t) => t.payment_status.toLowerCase() === paymentStatus.toLowerCase()
+        );
       }
 
       if (cleaningStatus && cleaningStatus !== 'all') {
-        transactions = transactions.filter((t) => t.cleaning_status.toLowerCase() === cleaningStatus.toLowerCase());
+        transactions = transactions.filter(
+          (t) => t.cleaning_status.toLowerCase() === cleaningStatus.toLowerCase()
+        );
       }
 
       if (search && search.trim()) {
@@ -65,29 +127,39 @@ export async function getAllTransactions(req, res) {
         );
       }
 
-      transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      transactions = transactions.slice((Number(page) - 1) * Number(limit), Number(page) * Number(limit));
+      transactions.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      transactions = transactions.slice(
+        (Number(page) - 1) * Number(limit),
+        Number(page) * Number(limit)
+      );
     }
 
-    const formatted = transactions.map((t) => ({
-      id: t.id,
-      orderId: t.order_id,
-      kioskId: t.kiosk_id,
-      shoeType: normalizeShoeType(t.shoe_type),
-      serviceTier: normalizeServiceTier(t.service_tier, t.service_name),
-      serviceName: normalizeServiceName(t.service_name, t.service_tier),
-      addons: normalizeAddons(t.addons),
-      basePrice: Number(t.base_price),
-      addonsPrice: Number(t.addons_price),
-      totalAmount: Number(t.total_amount),
-      paymentMethod: t.payment_method,
-      paymentStatus: t.payment_status,
-      paymentRef: t.payment_ref,
-      cleaningStatus: t.cleaning_status,
-      startedAt: t.started_at,
-      completedAt: t.completed_at,
-      createdAt: t.created_at,
-    }));
+    const formatted = transactions.map((t) => {
+      const kInfo = kiosksMap[t.kiosk_id];
+      return {
+        id: t.id,
+        orderId: t.order_id,
+        kioskId: t.kiosk_id,
+        kioskName: kInfo?.name || t.kiosk_id,
+        kioskLocation: kInfo?.location || kInfo?.address || '',
+        shoeType: normalizeShoeType(t.shoe_type),
+        serviceTier: normalizeServiceTier(t.service_tier, t.service_name),
+        serviceName: normalizeServiceName(t.service_name, t.service_tier),
+        addons: normalizeAddons(t.addons),
+        basePrice: Number(t.base_price),
+        addonsPrice: Number(t.addons_price),
+        totalAmount: Number(t.total_amount),
+        paymentMethod: t.payment_method,
+        paymentStatus: t.payment_status,
+        paymentRef: t.payment_ref,
+        cleaningStatus: t.cleaning_status,
+        startedAt: t.started_at,
+        completedAt: t.completed_at,
+        createdAt: t.created_at,
+      };
+    });
 
     res.json({
       success: true,
@@ -103,6 +175,7 @@ export async function getAllTransactions(req, res) {
 export async function getTransactionById(req, res) {
   try {
     const { id } = req.params;
+    const authorizedKioskIds = await getAuthorizedKioskIdsForUser(req.user);
     const db = await getDbConnection();
 
     let transaction = null;
@@ -114,18 +187,39 @@ export async function getTransactionById(req, res) {
       );
       if (rows.length > 0) transaction = rows[0];
     } else {
-      transaction = memoryStore.transactions.find((t) => t.id === id || t.order_id === id);
+      transaction = memoryStore.transactions.find(
+        (t) => t.id === id || t.order_id === id
+      );
+      if (transaction) {
+        const k = memoryStore.kiosks.find((item) => item.id === transaction.kiosk_id);
+        transaction = {
+          ...transaction,
+          kiosk_name: k?.name,
+          kiosk_location: k?.location,
+        };
+      }
     }
 
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found.' });
     }
 
+    // Enforce buyer-to-kiosk isolation
+    if (
+      authorizedKioskIds !== null &&
+      !authorizedKioskIds.includes(transaction.kiosk_id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied. This transaction belongs to a kiosk not assigned to your account.',
+      });
+    }
+
     const formatted = {
       id: transaction.id,
       orderId: transaction.order_id,
       kioskId: transaction.kiosk_id,
-      kioskName: transaction.kiosk_name || 'KixCleen Vendo #1',
+      kioskName: transaction.kiosk_name || transaction.kiosk_id,
       kioskLocation: transaction.kiosk_location || 'Ground Floor Lobby',
       shoeType: normalizeShoeType(transaction.shoe_type),
       serviceTier: normalizeServiceTier(transaction.service_tier, transaction.service_name),
@@ -236,18 +330,17 @@ export async function createTransaction(req, res) {
       } else {
         memoryStore.transactions.unshift(record);
       }
+      saveMemoryStore();
     }
 
-    console.log(`📥 [Transactions] New Order created: #${orderId} (₱${totalAmount}) via ${paymentMethod}`);
+    console.log(`📥 [Transactions] New Order created: #${orderId} (₱${totalAmount}) on ${kioskId} via ${paymentMethod}`);
 
-    // Realtime broadcast via Socket.IO
     broadcastNewTransaction(record);
 
-    // Send push notification to Owner/Admin
     sendPushNotification(
       '💰 New Transaction Paid',
       `Order #${orderId} paid ₱${totalAmount.toFixed(2)} via ${paymentMethod.toUpperCase()}`,
-      { orderId, totalAmount }
+      { orderId, totalAmount, kioskId }
     );
 
     res.status(201).json({ success: true, message: 'Transaction recorded', transaction: record });
@@ -302,6 +395,7 @@ export async function updateTransactionStatus(req, res) {
           if (cleaningStatus === 'completed') tx.completed_at = new Date().toISOString();
         }
         updated = tx;
+        saveMemoryStore();
       }
     }
 
@@ -309,14 +403,13 @@ export async function updateTransactionStatus(req, res) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
 
-    // Broadcast update via Socket.IO
     broadcastTransactionUpdate(updated);
 
     if (cleaningStatus === 'completed') {
       sendPushNotification(
         '✨ Wash Cycle Completed',
         `Chamber door unlocked for Order #${updated.order_id}`,
-        { orderId: updated.order_id }
+        { orderId: updated.order_id, kioskId: updated.kiosk_id }
       );
     }
 

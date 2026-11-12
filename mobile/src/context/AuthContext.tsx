@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isOwner = user?.role === 'owner';
+  const isOwner = user?.role === 'owner' || user?.role === 'buyer';
   const isAuthenticated = Boolean(user && token);
 
   return (

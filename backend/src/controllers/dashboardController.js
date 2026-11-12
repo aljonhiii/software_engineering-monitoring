@@ -3,10 +3,25 @@ import {
   memoryStore,
   normalizeShoeType,
   normalizeServiceName,
+  getAuthorizedKioskIdsForUser,
 } from '../config/db.js';
 
 export async function getDashboardStats(req, res) {
   try {
+    const { kioskId } = req.query;
+    const authorizedKioskIds = await getAuthorizedKioskIdsForUser(req.user);
+
+    if (
+      kioskId &&
+      authorizedKioskIds !== null &&
+      !authorizedKioskIds.includes(String(kioskId))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied. You are not authorized to access this kiosk.',
+      });
+    }
+
     const db = await getDbConnection();
 
     let allTransactions = [];
@@ -16,11 +31,22 @@ export async function getDashboardStats(req, res) {
       const [txRows] = await db.query('SELECT * FROM transactions ORDER BY created_at DESC');
       allTransactions = txRows;
 
-      const [kioskRows] = await db.query('SELECT * FROM kiosks');
+      const [kioskRows] = await db.query('SELECT * FROM kiosks ORDER BY name ASC');
       kiosks = kioskRows;
     } else {
       allTransactions = [...memoryStore.transactions];
       kiosks = [...memoryStore.kiosks];
+    }
+
+    // Scope kiosks and transactions to buyer's assigned kiosks
+    if (authorizedKioskIds !== null) {
+      kiosks = kiosks.filter((k) => authorizedKioskIds.includes(k.id));
+      allTransactions = allTransactions.filter((t) => authorizedKioskIds.includes(t.kiosk_id));
+    }
+
+    if (kioskId) {
+      kiosks = kiosks.filter((k) => k.id === String(kioskId));
+      allTransactions = allTransactions.filter((t) => t.kiosk_id === String(kioskId));
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -45,10 +71,11 @@ export async function getDashboardStats(req, res) {
     const completedCleaning = allTransactions.filter((t) => t.cleaning_status === 'completed').length;
     const activeCleaning = allTransactions.filter((t) => t.cleaning_status === 'in_progress').length;
 
-    // Recent 5 transactions
-    const recentTransactions = allTransactions.slice(0, 5).map((t) => ({
+    // Recent transactions
+    const recentTransactions = allTransactions.slice(0, 6).map((t) => ({
       id: t.id,
       orderId: t.order_id,
+      kioskId: t.kiosk_id,
       shoeType: normalizeShoeType(t.shoe_type),
       serviceName: normalizeServiceName(t.service_name, t.service_tier),
       totalAmount: Number(t.total_amount),
@@ -58,21 +85,12 @@ export async function getDashboardStats(req, res) {
       createdAt: t.created_at,
     }));
 
-    // Primary kiosk state
-    const primaryKiosk = kiosks[0] || {
-      id: 'KIOSK-01-MAIN',
-      name: 'KixCleen Vendo #1',
-      status: 'online',
-      door_locked: false,
-      water_level_pct: 90,
-      soap_level_pct: 95,
-      current_activity: 'Idle',
-      last_heartbeat: new Date().toISOString(),
-    };
+    // Primary kiosk state (or null/offline placeholder if buyer has 0 assigned kiosks)
+    const primaryKiosk = kiosks[0] || null;
 
-    // System activity stream
-    const activities = [
-      ...allTransactions.slice(0, 10).map((t) => ({
+    const activities = allTransactions.slice(0, 10).map((t) => {
+      const matchedKiosk = kiosks.find((k) => k.id === t.kiosk_id);
+      return {
         id: `act-${t.id}`,
         type: t.cleaning_status === 'completed' ? 'cleaning_completed' : 'payment_received',
         title:
@@ -80,9 +98,9 @@ export async function getDashboardStats(req, res) {
             ? `Cycle Completed: Order #${t.order_id}`
             : `Payment Received (₱${Number(t.total_amount).toFixed(2)}) via ${t.payment_method.toUpperCase()}`,
         time: t.completed_at || t.created_at,
-        kioskName: primaryKiosk.name,
-      })),
-    ];
+        kioskName: matchedKiosk?.name || t.kiosk_id,
+      };
+    });
 
     res.json({
       success: true,
@@ -97,12 +115,15 @@ export async function getDashboardStats(req, res) {
         failedPaymentsCount: failedTransactions.length,
         completedCleansCount: completedCleaning,
         activeCleansCount: activeCleaning,
-        machineStatus: primaryKiosk.status,
-        machineActivity: primaryKiosk.current_activity,
-        doorLocked: Boolean(primaryKiosk.door_locked),
-        waterLevelPercent: primaryKiosk.water_level_pct,
-        soapLevelPercent: primaryKiosk.soap_level_pct,
-        lastHeartbeat: primaryKiosk.last_heartbeat,
+        assignedKiosksCount: kiosks.length,
+        primaryKioskId: primaryKiosk ? primaryKiosk.id : null,
+        primaryKioskName: primaryKiosk ? primaryKiosk.name : 'No Kiosk Assigned',
+        machineStatus: primaryKiosk ? primaryKiosk.status : 'offline',
+        machineActivity: primaryKiosk ? primaryKiosk.current_activity : 'No assigned kiosk',
+        doorLocked: primaryKiosk ? Boolean(primaryKiosk.door_locked) : false,
+        waterLevelPercent: primaryKiosk ? primaryKiosk.water_level_pct : 0,
+        soapLevelPercent: primaryKiosk ? primaryKiosk.soap_level_pct : 0,
+        lastHeartbeat: primaryKiosk ? primaryKiosk.last_heartbeat : null,
         recentTransactions,
         activities: activities.slice(0, 6),
       },

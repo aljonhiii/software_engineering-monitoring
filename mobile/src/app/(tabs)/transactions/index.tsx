@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
 import { useSocket } from '../../../context/SocketContext';
+import { useAuth } from '../../../context/AuthContext';
 import { getTransactionsApi } from '../../../api/transactionsApi';
 import { Transaction } from '../../../types';
 import { ScreenHeader } from '../../../components/common/ScreenHeader';
@@ -24,6 +25,7 @@ const STATUS_FILTERS = ['All', 'Paid', 'Pending', 'Failed'];
 export default function TransactionsListScreen() {
   const router = useRouter();
   const { socket } = useSocket();
+  const { user } = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -58,6 +60,18 @@ export default function TransactionsListScreen() {
     if (!socket) return;
 
     const handleNewTx = (newTx: any) => {
+      const txKioskId = newTx.kiosk_id || newTx.kioskId;
+      if (
+        user &&
+        (user.role === 'buyer' || user.role === 'owner') &&
+        Array.isArray(user.assignedKioskIds) &&
+        user.assignedKioskIds.length > 0 &&
+        txKioskId &&
+        !user.assignedKioskIds.includes(txKioskId)
+      ) {
+        return;
+      }
+
       setTransactions((prev) => {
         const orderId = newTx.order_id || newTx.orderId;
         const exists = prev.some((t) => t.orderId === orderId);

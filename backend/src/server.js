@@ -9,6 +9,8 @@ import { getDbConnection } from './config/db.js';
 import { initSocket } from './services/socket.js';
 
 import authRoutes from './routes/auth.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import transactionsRoutes from './routes/transactions.routes.js';
 import paymentsRoutes from './routes/payments.routes.js';
@@ -21,11 +23,11 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO with permissive CORS for mobile / local development
+// Socket.IO with permissive CORS for mobile / web / local development
 const io = new SocketIOServer(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   },
 });
 
@@ -39,7 +41,9 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/payments', paymentsRoutes);
@@ -51,7 +55,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'kixcleen-monitoring-backend',
+    service: 'kixcleen-central-management-backend',
     time: new Date().toISOString(),
   });
 });
@@ -72,21 +76,22 @@ function getLocalIpAddresses() {
 
 // Start Server
 async function startServer() {
-  // Try connecting to MariaDB
   await getDbConnection();
 
   server.listen(PORT, '0.0.0.0', () => {
     const ips = getLocalIpAddresses();
     console.log('========================================================');
-    console.log(`🚀 KixCleen Monitor Backend API running on port ${PORT}`);
+    console.log(`🚀 KixCleen Central Backend API running on port ${PORT}`);
     console.log('--------------------------------------------------------');
     console.log(`📍 Localhost:     http://localhost:${PORT}`);
     ips.forEach((ip) => {
       console.log(`📱 Local Network: http://${ip}:${PORT}`);
     });
     console.log('--------------------------------------------------------');
+    console.log('🌍 Public API:    /api/public/kiosks');
+    console.log('🛡️  Super Admin:   /api/admin/* (Role: superadmin)');
+    console.log('📱 Buyer App API: /api/dashboard, /api/machine, /api/transactions');
     console.log('⚡ Socket.IO:     Real-time event broadcasting active');
-    console.log('🔐 Auth:          Role-Based Access Control (Owner / Admin)');
     console.log('========================================================');
   });
 }

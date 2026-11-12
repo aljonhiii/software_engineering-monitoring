@@ -3,13 +3,26 @@ import {
   memoryStore,
   normalizeShoeType,
   normalizeServiceName,
+  getAuthorizedKioskIdsForUser,
 } from '../config/db.js';
 
 export async function getSalesReports(req, res) {
   try {
-    const { period = 'week' } = req.query; // 'day', 'week', 'month'
-    const db = await getDbConnection();
+    const { period = 'week', kioskId } = req.query; // 'day', 'week', 'month'
+    const authorizedKioskIds = await getAuthorizedKioskIdsForUser(req.user);
 
+    if (
+      kioskId &&
+      authorizedKioskIds !== null &&
+      !authorizedKioskIds.includes(String(kioskId))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied. You are not authorized to access sales reports for this kiosk.',
+      });
+    }
+
+    const db = await getDbConnection();
     let allTransactions = [];
 
     if (db) {
@@ -23,6 +36,13 @@ export async function getSalesReports(req, res) {
       );
     }
 
+    if (authorizedKioskIds !== null) {
+      allTransactions = allTransactions.filter((t) => authorizedKioskIds.includes(t.kiosk_id));
+    }
+    if (kioskId) {
+      allTransactions = allTransactions.filter((t) => t.kiosk_id === String(kioskId));
+    }
+
     // 1. Chart series data (past 7 days by default)
     const daysMap = {};
     const daysCount = period === 'month' ? 30 : period === 'day' ? 1 : 7;
@@ -31,7 +51,11 @@ export async function getSalesReports(req, res) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      daysMap[key] = { label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }), revenue: 0, orders: 0 };
+      daysMap[key] = {
+        label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
+        revenue: 0,
+        orders: 0,
+      };
     }
 
     allTransactions.forEach((t) => {

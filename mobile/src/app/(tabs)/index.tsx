@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Shadows, BorderRadius } from '../../constants/theme';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import { getDashboardStatsApi } from '../../api/dashboardApi';
 import { getSalesReportsApi } from '../../api/salesApi';
 import { DashboardStats, SalesReport } from '../../types';
@@ -25,6 +26,7 @@ import { NotificationsModal, NotificationItem } from '../../components/common/No
 export default function DashboardScreen() {
   const router = useRouter();
   const { socket } = useSocket();
+  const { user } = useAuth();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
@@ -98,7 +100,20 @@ export default function DashboardScreen() {
     if (!socket) return;
 
     const handleNewTx = (tx: any) => {
-      console.log('[Dashboard] Live order received:', tx.order_id || tx.orderId);
+      const txKioskId = tx.kiosk_id || tx.kioskId;
+      // Scoping check: if buyer has assigned kiosks, ignore events for unrelated machines
+      if (
+        user &&
+        (user.role === 'buyer' || user.role === 'owner') &&
+        Array.isArray(user.assignedKioskIds) &&
+        user.assignedKioskIds.length > 0 &&
+        txKioskId &&
+        !user.assignedKioskIds.includes(txKioskId)
+      ) {
+        return;
+      }
+
+      console.log('[Dashboard] Live order received for assigned kiosk:', tx.order_id || tx.orderId);
       fetchStats();
 
       // Automatically add new order notification
@@ -120,6 +135,18 @@ export default function DashboardScreen() {
     };
 
     const handleMachineStatus = (machineData: any) => {
+      const machineKioskId = machineData.id || machineData.kiosk_id;
+      if (
+        user &&
+        (user.role === 'buyer' || user.role === 'owner') &&
+        Array.isArray(user.assignedKioskIds) &&
+        user.assignedKioskIds.length > 0 &&
+        machineKioskId &&
+        !user.assignedKioskIds.includes(machineKioskId)
+      ) {
+        return;
+      }
+
       setStats((prev) => {
         if (!prev) return prev;
         return {

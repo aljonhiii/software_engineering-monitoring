@@ -66,6 +66,11 @@ export function StatusBadge({ status, type = 'payment', size = 'sm' }: StatusBad
       text = '#1D4ED8';
       dot = '#3B82F6';
       label = 'ACTIVE';
+    } else if (norm === 'maintenance') {
+      bg = '#FFFBEB';
+      text = '#B45309';
+      dot = '#F59E0B';
+      label = 'MAINTENANCE';
     } else if (norm === 'error') {
       bg = '#FEF2F2';
       text = '#B91C1C';
@@ -78,11 +83,16 @@ export function StatusBadge({ status, type = 'payment', size = 'sm' }: StatusBad
       label = 'OFFLINE';
     }
   } else if (type === 'role') {
-    if (norm === 'owner') {
+    if (norm === 'owner' || norm === 'buyer') {
       bg = '#F5F3FF';
       text = '#6D28D9';
       dot = '#8B5CF6';
-      label = 'OWNER';
+      label = norm === 'buyer' ? 'BUYER / OWNER' : 'OWNER';
+    } else if (norm === 'superadmin') {
+      bg = '#ECFDF5';
+      text = '#047857';
+      dot = '#10B981';
+      label = 'SUPER ADMIN';
     } else {
       bg = '#EFF6FF';
       text = '#1D4ED8';

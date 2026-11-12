@@ -1,11 +1,15 @@
-export type UserRole = 'owner' | 'admin';
+export type UserRole = 'superadmin' | 'buyer' | 'owner' | 'admin';
 
 export interface User {
   id: string;
   username: string;
   email: string;
   fullName: string;
+  phone?: string | null;
+  companyName?: string | null;
   role: UserRole;
+  accountStatus?: string;
+  assignedKioskIds?: string[] | null;
   createdAt?: string;
 }
 
@@ -52,7 +56,10 @@ export interface DashboardStats {
   failedPaymentsCount: number;
   completedCleansCount: number;
   activeCleansCount: number;
-  machineStatus: 'online' | 'offline' | 'busy' | 'error';
+  assignedKiosksCount?: number;
+  primaryKioskId?: string | null;
+  primaryKioskName?: string;
+  machineStatus: 'online' | 'offline' | 'busy' | 'error' | 'maintenance';
   machineActivity: string;
   doorLocked: boolean;
   waterLevelPercent: number;
@@ -61,6 +68,7 @@ export interface DashboardStats {
   recentTransactions: Array<{
     id: string;
     orderId: string;
+    kioskId?: string;
     shoeType: string;
     serviceName: string;
     totalAmount: number;
@@ -81,8 +89,13 @@ export interface DashboardStats {
 export interface KioskMachine {
   id: string;
   name: string;
+  address?: string;
+  city?: string;
   location: string;
-  status: 'online' | 'offline' | 'busy' | 'error';
+  latitude?: number | null;
+  longitude?: number | null;
+  operatingHours?: string;
+  status: 'online' | 'offline' | 'busy' | 'error' | 'maintenance';
   doorLocked: boolean;
   waterLevelPercent: number;
   soapLevelPercent: number;

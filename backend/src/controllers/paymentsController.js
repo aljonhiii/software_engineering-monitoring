@@ -1,17 +1,42 @@
-import { getDbConnection, memoryStore } from '../config/db.js';
+import {
+  getDbConnection,
+  memoryStore,
+  getAuthorizedKioskIdsForUser,
+} from '../config/db.js';
 
 export async function getPaymentsLedger(req, res) {
   try {
+    const { kioskId } = req.query;
+    const authorizedKioskIds = await getAuthorizedKioskIdsForUser(req.user);
+
+    if (
+      kioskId &&
+      authorizedKioskIds !== null &&
+      !authorizedKioskIds.includes(String(kioskId))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied. You are not authorized to access payments for this kiosk.',
+      });
+    }
+
     const db = await getDbConnection();
     let allTransactions = [];
 
     if (db) {
       const [rows] = await db.query(
-        'SELECT id, order_id, total_amount, payment_method, payment_status, payment_ref, created_at FROM transactions ORDER BY created_at DESC'
+        'SELECT id, order_id, kiosk_id, total_amount, payment_method, payment_status, payment_ref, created_at FROM transactions ORDER BY created_at DESC'
       );
       allTransactions = rows;
     } else {
       allTransactions = [...memoryStore.transactions];
+    }
+
+    if (authorizedKioskIds !== null) {
+      allTransactions = allTransactions.filter((t) => authorizedKioskIds.includes(t.kiosk_id));
+    }
+    if (kioskId) {
+      allTransactions = allTransactions.filter((t) => t.kiosk_id === String(kioskId));
     }
 
     // Method breakdown
@@ -45,7 +70,6 @@ export async function getPaymentsLedger(req, res) {
           methodsSummary[method].count++;
           methodsSummary[method].amount += amount;
         } else {
-          // Fallback to cash if unknown method
           methodsSummary.cash.count++;
           methodsSummary.cash.amount += amount;
         }
@@ -58,6 +82,7 @@ export async function getPaymentsLedger(req, res) {
       return {
         id: t.id,
         orderId: t.order_id,
+        kioskId: t.kiosk_id,
         amount,
         paymentMethod: method,
         paymentStatus: t.payment_status,
