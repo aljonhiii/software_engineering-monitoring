@@ -13,6 +13,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  completeOnboarding: (kioskData?: any) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -89,6 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const completeOnboarding = (kioskData?: any) => {
+    setUser((prev) => (prev ? { ...prev, onboardingCompleted: true } : null));
+  };
+
   const isOwner = user?.role === 'owner' || user?.role === 'buyer';
   const isAuthenticated = Boolean(user && token);
 
@@ -104,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         changePassword,
         refreshUser,
+        completeOnboarding,
       }}
     >
       {children}

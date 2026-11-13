@@ -10,6 +10,7 @@ export interface User {
   role: UserRole;
   accountStatus?: string;
   assignedKioskIds?: string[] | null;
+  onboardingCompleted?: boolean;
   createdAt?: string;
 }
 
@@ -102,6 +103,16 @@ export interface KioskMachine {
   currentOrderId?: string | null;
   currentActivity: string;
   lastHeartbeat?: string | null;
+}
+
+export interface KioskLocationRegistrationPayload {
+  kioskId?: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  barangay?: string;
+  city?: string;
+  locationName?: string;
 }
 
 export interface PaymentsLedgerSummary {

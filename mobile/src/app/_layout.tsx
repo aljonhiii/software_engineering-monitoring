@@ -8,7 +8,7 @@ import { LoadingView } from '../components/common/LoadingView';
 import { Colors } from '../constants/theme';
 
 function RootNavigator() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -24,13 +24,22 @@ function RootNavigator() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboardingGroup = segments[0] === '(onboarding)';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+    } else if (isAuthenticated) {
+      const isOwner = user?.role === 'owner' || user?.role === 'buyer';
+      // If owner has explicitly false onboardingCompleted, require onboarding
+      const needsOnboarding = isOwner && user?.onboardingCompleted === false;
+
+      if (needsOnboarding && !inOnboardingGroup) {
+        router.replace('/(onboarding)/welcome');
+      } else if (!needsOnboarding && (inAuthGroup || inOnboardingGroup)) {
+        router.replace('/(tabs)');
+      }
     }
-  }, [isAuthenticated, isLoading, segments, router]);
+  }, [isAuthenticated, isLoading, user, segments, router]);
 
   if (isLoading) {
     return <LoadingView message="Authenticating session..." />;
@@ -46,6 +55,7 @@ function RootNavigator() {
         }}
       >
         <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </>

@@ -741,3 +741,34 @@ export function hasValidCoordinates(lat, lng) {
     numLng <= 180
   );
 }
+
+/**
+ * Check whether an owner user has completed the kiosk onboarding setup.
+ * Returns true for superadmin/admin or if user already marked onboarding_completed,
+ * or if at least one of their assigned kiosks has registered coordinates.
+ */
+export async function checkUserOnboardingStatus(user, assignedKioskIds) {
+  if (!user) return true;
+  const normRole = normalizeUserRole(user.role);
+  if (normRole === 'superadmin' || normRole === 'admin') {
+    return true;
+  }
+  if (user.onboarding_completed === 1 || user.onboarding_completed === true) {
+    return true;
+  }
+  const kioskIds = assignedKioskIds !== undefined ? assignedKioskIds : await getAuthorizedKioskIdsForUser(user);
+  if (!kioskIds || kioskIds.length === 0) {
+    return false;
+  }
+  const db = await getDbConnection();
+  if (db) {
+    const [rows] = await db.query(
+      'SELECT latitude, longitude FROM kiosks WHERE id IN (?) LIMIT 10',
+      [kioskIds]
+    );
+    return rows.some((k) => hasValidCoordinates(k.latitude, k.longitude));
+  } else {
+    const kiosks = memoryStore.kiosks.filter((k) => kioskIds.includes(k.id));
+    return kiosks.some((k) => hasValidCoordinates(k.latitude, k.longitude));
+  }
+}

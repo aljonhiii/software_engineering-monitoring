@@ -6,6 +6,7 @@ import {
   memoryStore,
   saveMemoryStore,
   getAuthorizedKioskIdsForUser,
+  checkUserOnboardingStatus,
 } from '../config/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kixcleen_super_secret_jwt_key_2026_monitor';
@@ -99,6 +100,7 @@ export async function login(req, res) {
     }
 
     const assignedKioskIds = await getAuthorizedKioskIdsForUser(user);
+    const onboardingCompleted = await checkUserOnboardingStatus(user, assignedKioskIds);
 
     // Generate JWT
     const token = jwt.sign(
@@ -127,6 +129,7 @@ export async function login(req, res) {
         role: user.role,
         accountStatus: user.account_status || 'active',
         assignedKioskIds,
+        onboardingCompleted,
       },
     });
   } catch (err) {
@@ -156,6 +159,7 @@ export async function getMe(req, res) {
     }
 
     const assignedKioskIds = await getAuthorizedKioskIdsForUser(user);
+    const onboardingCompleted = await checkUserOnboardingStatus(user, assignedKioskIds);
 
     res.json({
       success: true,
@@ -169,6 +173,7 @@ export async function getMe(req, res) {
         role: user.role,
         accountStatus: user.account_status || 'active',
         assignedKioskIds,
+        onboardingCompleted,
         createdAt: user.created_at,
       },
     });
@@ -457,6 +462,7 @@ export async function completeAccountSetup(req, res) {
 
     const assignedKioskIds = await getAuthorizedKioskIdsForUser(user);
     const assignedKiosks = await resolveAssignedKiosksList(assignedKioskIds);
+    const onboardingCompleted = await checkUserOnboardingStatus(user, assignedKioskIds);
 
     const jwtToken = jwt.sign(
       {
@@ -484,6 +490,7 @@ export async function completeAccountSetup(req, res) {
         accountStatus: 'active',
         assignedKioskIds: assignedKioskIds || [],
         assignedKiosks: assignedKiosks || [],
+        onboardingCompleted,
       },
     });
   } catch (err) {
