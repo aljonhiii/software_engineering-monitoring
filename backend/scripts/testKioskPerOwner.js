@@ -67,9 +67,17 @@ async function run() {
   const { buyer, invitation, dedicatedKiosk } = createBuyerRes.data;
   assert(dedicatedKiosk && dedicatedKiosk.id, `Dedicated kiosk provisioned with ID: ${dedicatedKiosk?.id}`);
   assert(
-    dedicatedKiosk.launcherUrl.startsWith('http://localhost:8081') &&
-      dedicatedKiosk.launcherUrl.includes(`?kioskId=${encodeURIComponent(dedicatedKiosk.id)}`),
-    `Dedicated kiosk launcher URL points to Shoeclean on port 8081: ${dedicatedKiosk.launcherUrl}`
+    dedicatedKiosk.launcherUrl.includes('/api/launcher/kiosk') &&
+      dedicatedKiosk.launcherUrl.includes(`kioskId=${encodeURIComponent(dedicatedKiosk.id)}`),
+    `Dedicated kiosk dynamic launcher URL generated: ${dedicatedKiosk.launcherUrl}`
+  );
+
+  // Test dynamic port auto-discovery endpoint
+  const detectRes = await req(`/launcher/detect?kioskId=${encodeURIComponent(dedicatedKiosk.id)}`);
+  assert(detectRes.ok && detectRes.data.success, 'Dynamic launcher detect endpoint responded');
+  assert(
+    detectRes.data.running && detectRes.data.targetUrl && detectRes.data.targetUrl.includes(dedicatedKiosk.id),
+    `Dynamic port auto-discovery resolved Shoeclean target URL: ${detectRes.data.targetUrl}`
   );
   assert(invitation && invitation.token, 'Account setup invitation token generated');
 

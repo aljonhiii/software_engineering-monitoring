@@ -250,7 +250,7 @@ async function resolveAssignedKiosksList(kioskIds) {
     );
     return rows.map((k) => ({
       ...k,
-      launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
+      launcherUrl: `http://localhost:3000/api/launcher/kiosk?kioskId=${encodeURIComponent(k.id)}`,
     }));
   } else {
     return memoryStore.kiosks
@@ -262,7 +262,7 @@ async function resolveAssignedKiosksList(kioskIds) {
         address: k.address,
         location: k.location,
         status: k.status,
-        launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
+        launcherUrl: `http://localhost:3000/api/launcher/kiosk?kioskId=${encodeURIComponent(k.id)}`,
       }));
   }
 }

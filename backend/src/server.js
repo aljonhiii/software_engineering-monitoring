@@ -17,6 +17,7 @@ import paymentsRoutes from './routes/payments.routes.js';
 import salesRoutes from './routes/sales.routes.js';
 import machineRoutes from './routes/machine.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
+import launcherRoutes from './routes/launcher.routes.js';
 
 dotenv.config();
 
@@ -50,6 +51,13 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/machine', machineRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/launcher', launcherRoutes);
+
+// Top-level launcher shortcut
+app.get('/launcher', (req, res) => {
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(302, `/api/launcher/kiosk${query}`);
+});
 
 // Health check
 app.get('/health', (req, res) => {

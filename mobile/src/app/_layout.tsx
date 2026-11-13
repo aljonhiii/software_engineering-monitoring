@@ -13,6 +13,14 @@ function RootNavigator() {
   const router = useRouter();
 
   useEffect(() => {
+    // If opened on web with a kioskId query param, the user meant to open the Shoeclean Kiosk!
+    if (typeof window !== 'undefined' && window.location?.search?.includes('kioskId=')) {
+      const search = window.location.search;
+      console.log('[Monitoring] Detected kioskId param on monitoring app. Redirecting to dynamic kiosk launcher:', search);
+      window.location.replace(`http://localhost:3000/api/launcher/kiosk${search}`);
+      return;
+    }
+
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';

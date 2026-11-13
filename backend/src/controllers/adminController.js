@@ -9,6 +9,13 @@ import { hashInviteToken } from './authController.js';
 
 const KIOSK_BASE_URL = process.env.KIOSK_BASE_URL || 'http://localhost:8081';
 
+function getDynamicLauncherUrl(kioskId) {
+  const cleanId = String(kioskId || '').trim().toUpperCase();
+  return cleanId
+    ? `http://localhost:3000/api/launcher/kiosk?kioskId=${encodeURIComponent(cleanId)}`
+    : 'http://localhost:3000/api/launcher/kiosk';
+}
+
 function parseCoordinate(val, min, max, label) {
   if (val === null || val === undefined || val === '') {
     return { value: null, error: null };
@@ -105,7 +112,7 @@ function formatAdminBuyer(u, owners, kiosks) {
         status: k.status || 'offline',
         isActive: Boolean(k.is_active ?? 1),
         assignedAt: o.assigned_at,
-        launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
+        launcherUrl: getDynamicLauncherUrl(k.id),
       };
     })
     .filter(Boolean);
@@ -822,11 +829,9 @@ export async function createAdminBuyer(req, res) {
     const createdBuyer = updatedData.users.find((u) => u.id === buyerId);
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
 
-    const launcherUrl = provisionedKiosk
-      ? `${KIOSK_BASE_URL}/?kioskId=${provisionedKiosk.id}`
-      : requestedKioskIds[0]
-      ? `${KIOSK_BASE_URL}/?kioskId=${requestedKioskIds[0]}`
-      : KIOSK_BASE_URL;
+    const launcherUrl = getDynamicLauncherUrl(
+      provisionedKiosk?.id || requestedKioskIds[0]
+    );
 
     res.status(201).json({
       success: true,
