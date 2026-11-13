@@ -4,9 +4,38 @@
  * of which port Expo bundler is currently running on (8081, 8082, 8083, etc.).
  */
 
+import os from 'os';
+
 let lastRegisteredShoecleanUrl = null;
 
 const CANDIDATE_PORTS = [8081, 8082, 8083, 8084, 8085, 8080, 19006, 19000];
+
+/**
+ * Returns the primary physical LAN IPv4 address for tablet testing.
+ */
+export function getPrimaryLanIp() {
+  const interfaces = os.networkInterfaces();
+  const addresses = [];
+  for (const name of Object.keys(interfaces)) {
+    const lower = name.toLowerCase();
+    if (
+      lower.includes('virtual') ||
+      lower.includes('vethernet') ||
+      lower.includes('vmware') ||
+      lower.includes('wsl')
+    ) {
+      continue;
+    }
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        if (!iface.address.startsWith('192.168.56.') && !iface.address.startsWith('169.254.')) {
+          addresses.push(iface.address);
+        }
+      }
+    }
+  }
+  return addresses[0] || 'localhost';
+}
 
 /**
  * Checks a specific port to see if it is running the Shoeclean kiosk customer terminal.
@@ -91,7 +120,18 @@ export async function launchKiosk(req, res) {
   const activeUrl = await findActiveShoecleanUrl();
 
   if (activeUrl) {
-    const targetUrl = `${activeUrl}/?kioskId=${encodeURIComponent(kioskId)}`;
+    const hostHeader = (req.headers.host || '').split(':')[0];
+    let resolvedOrigin = activeUrl;
+
+    // If caller connected via LAN IP (tablet/phone) or specified host, preserve that LAN host
+    if (hostHeader && hostHeader !== 'localhost' && hostHeader !== '127.0.0.1') {
+      try {
+        const u = new URL(activeUrl);
+        resolvedOrigin = `http://${hostHeader}:${u.port}`;
+      } catch {}
+    }
+
+    const targetUrl = `${resolvedOrigin}/?kioskId=${encodeURIComponent(kioskId)}`;
     console.log(`[Launcher] Redirecting to active Shoeclean Kiosk at: ${targetUrl}`);
     return res.redirect(302, targetUrl);
   }
@@ -251,4 +291,27 @@ export async function registerKiosk(req, res) {
     }
   }
   res.json({ success: false, message: 'Invalid origin' });
+}
+
+/**
+ * GET /api/launcher/network-info
+ * Returns primary LAN IP and tablet scannable launcher URLs.
+ */
+export async function getNetworkInfo(req, res) {
+  const primaryIp = getPrimaryLanIp();
+  const activeUrl = await findActiveShoecleanUrl();
+  let detectedPort = '8081';
+  if (activeUrl) {
+    try {
+      detectedPort = new URL(activeUrl).port || '8081';
+    } catch {}
+  }
+
+  res.json({
+    success: true,
+    primaryIp,
+    lanBackendUrl: `http://${primaryIp}:3000`,
+    lanKioskUrl: `http://${primaryIp}:${detectedPort}`,
+    launcherUrl: `http://${primaryIp}:3000/api/launcher/kiosk`,
+  });
 }
