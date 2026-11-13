@@ -297,13 +297,15 @@ export async function verifyInviteToken(req, res) {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Invalid or already used invitation link.',
+        code: 'INVALID_OR_USED',
+        message: 'This invitation link is invalid or has already been completed.',
       });
     }
 
     if (!user.is_active || user.account_status === 'deactivated') {
       return res.status(403).json({
         success: false,
+        code: 'DEACTIVATED',
         message: 'This buyer account has been deactivated.',
       });
     }
@@ -311,6 +313,7 @@ export async function verifyInviteToken(req, res) {
     if (user.invite_expires_at && new Date(user.invite_expires_at).getTime() < Date.now()) {
       return res.status(410).json({
         success: false,
+        code: 'EXPIRED',
         message: 'This invitation link has expired. Please ask the Super Admin to send a new invitation.',
       });
     }

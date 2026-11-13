@@ -6,6 +6,7 @@ import {
   hasValidCoordinates,
 } from '../config/db.js';
 import { hashInviteToken } from './authController.js';
+import { sendBuyerInvitationEmail, getFrontendBaseUrl } from '../services/emailService.js';
 
 const KIOSK_BASE_URL = process.env.KIOSK_BASE_URL || 'http://localhost:8081';
 
@@ -129,6 +130,8 @@ function formatAdminBuyer(u, owners, kiosks) {
     accountStatus: !u.is_active
       ? 'deactivated'
       : u.account_status || 'active',
+    isSetupComplete: Boolean(u.password_hash || u.account_status === 'active'),
+    setupStatus: (u.password_hash || u.account_status === 'active') ? 'done' : 'not_done',
     inviteExpiresAt: u.invite_expires_at || null,
     assignedKiosksCount: assignedKiosks.length,
     assignedKiosks,
@@ -828,14 +831,28 @@ export async function createAdminBuyer(req, res) {
     const updatedData = await fetchAllDataForAdmin();
     const createdBuyer = updatedData.users.find((u) => u.id === buyerId);
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
+    const frontendBase = getFrontendBaseUrl();
+    const fullSetupUrl = `${frontendBase}${invitationPath}`;
 
     const launcherUrl = getDynamicLauncherUrl(
       provisionedKiosk?.id || requestedKioskIds[0]
     );
 
+    // Dispatch setup invitation email
+    const emailResult = await sendBuyerInvitationEmail({
+      to: cleanEmail,
+      fullName: String(fullName).trim(),
+      username: cleanUsername,
+      setupUrl: fullSetupUrl,
+      dedicatedKiosk: provisionedKiosk,
+      expiresAt: expiresAtDate.toISOString(),
+    });
+
     res.status(201).json({
       success: true,
-      message: `Owner account created for ${fullName} with dedicated kiosk ${provisionedKiosk?.id || requestedKioskIds[0] || 'assigned'}.`,
+      message: emailResult.sent
+        ? `Owner account created for ${fullName}. Invitation email sent to ${cleanEmail}.`
+        : `Owner account created for ${fullName} with dedicated kiosk ${provisionedKiosk?.id || requestedKioskIds[0] || 'assigned'}.`,
       buyer: formatAdminBuyer(createdBuyer, updatedData.owners, updatedData.kiosks),
       dedicatedKiosk: provisionedKiosk
         ? {
@@ -847,9 +864,11 @@ export async function createAdminBuyer(req, res) {
           }
         : null,
       launcherUrl,
+      emailResult,
       invitation: {
         token: rawInviteToken,
         setupPath: invitationPath,
+        setupUrl: fullSetupUrl,
         expiresAt: expiresAtDate.toISOString(),
       },
     });
@@ -990,17 +1009,27 @@ export async function updateAdminBuyerStatus(req, res) {
 export async function generateBuyerInvite(req, res) {
   try {
     const { id } = req.params;
-    const { db, users } = await fetchAllDataForAdmin();
+    const { db, users, kiosks, owners } = await fetchAllDataForAdmin();
     const target = users.find((u) => u.id === id);
 
     if (!target) {
       return res.status(404).json({ success: false, message: 'Buyer account not found.' });
     }
 
+    const isAlreadyDone = Boolean(target.password_hash || target.account_status === 'active');
+    if (isAlreadyDone) {
+      return res.status(400).json({
+        success: false,
+        message: `Account setup for ${target.full_name} is already completed.`,
+        isSetupComplete: true,
+        setupStatus: 'done',
+      });
+    }
+
     const rawInviteToken = crypto.randomBytes(24).toString('hex');
     const tokenHash = hashInviteToken(rawInviteToken);
     const expiresAtDate = new Date(Date.now() + 7 * 24 * 3600 * 1000);
-    const nextStatus = target.password_hash ? 'active' : 'invited';
+    const nextStatus = 'invited';
 
     if (db) {
       await db.query(
@@ -1018,13 +1047,36 @@ export async function generateBuyerInvite(req, res) {
     const refreshed = await fetchAllDataForAdmin();
     const updatedUser = refreshed.users.find((u) => u.id === id);
 
+    const frontendBase = getFrontendBaseUrl();
+    const invitationPath = `/setup-account?token=${rawInviteToken}`;
+    const fullSetupUrl = `${frontendBase}${invitationPath}`;
+
+    // Find assigned kiosks to include in email
+    const buyerAssignments = refreshed.owners.filter((o) => o.buyer_id === id);
+    const firstAssignedKiosk = buyerAssignments.length > 0
+      ? refreshed.kiosks.find((k) => k.id === buyerAssignments[0].kiosk_id)
+      : null;
+
+    const emailResult = await sendBuyerInvitationEmail({
+      to: target.email,
+      fullName: target.full_name,
+      username: target.username,
+      setupUrl: fullSetupUrl,
+      dedicatedKiosk: firstAssignedKiosk,
+      expiresAt: expiresAtDate.toISOString(),
+    });
+
     res.json({
       success: true,
-      message: `Generated a new secure password setup invitation link for ${target.full_name}.`,
+      message: emailResult.sent
+        ? `Invitation email successfully resent to ${target.email}.`
+        : `Generated a new password setup invitation link for ${target.full_name}.`,
       buyer: formatAdminBuyer(updatedUser, refreshed.owners, refreshed.kiosks),
+      emailResult,
       invitation: {
         token: rawInviteToken,
-        setupPath: `/setup-account?token=${rawInviteToken}`,
+        setupPath: invitationPath,
+        setupUrl: fullSetupUrl,
         expiresAt: expiresAtDate.toISOString(),
       },
     });
