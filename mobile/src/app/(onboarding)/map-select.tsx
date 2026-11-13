@@ -4,18 +4,18 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   Alert,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import {
   InteractiveKioskMap,
   LocationCoordinate,
+  POPULAR_AREAS,
 } from '../../components/map/InteractiveKioskMap';
 import { Colors, Spacing } from '../../constants/theme';
 
@@ -33,16 +33,27 @@ export default function MapSelectScreen() {
   const initLng = params.initialLng ? parseFloat(params.initialLng) : 122.0790;
   const isGpsMethod = params.method === 'gps';
 
+  // Find if init coords match any known area
+  const matchedArea = POPULAR_AREAS.find(
+    (a) => Math.abs(a.lat - initLat) < 0.003 && Math.abs(a.lng - initLng) < 0.003
+  );
+
+  const initialAddress = isGpsMethod
+    ? 'Detected Current Position'
+    : (matchedArea?.address || 'Gov. Camins Ave (Near KCC Mall)');
+
+  const initialBarangay = matchedArea?.brgy || 'Canelar';
+
   const [selectedLocation, setSelectedLocation] = useState<LocationCoordinate>({
     latitude: initLat,
     longitude: initLng,
-    address: isGpsMethod ? 'Gov. Camins Ave (Detected Position)' : 'Gov. Camins Ave (Near KCC Mall)',
-    barangay: 'Canelar',
+    address: initialAddress,
+    barangay: initialBarangay,
     city: 'Zamboanga City',
-    locationName: 'Gov. Camins Ave, Brgy. Canelar',
+    locationName: `${initialAddress}, Brgy. ${initialBarangay}`,
   });
 
-  const [addressInput, setAddressInput] = useState<string>(selectedLocation.address || '');
+  const [addressInput, setAddressInput] = useState<string>(initialAddress);
 
   const handleLocationChange = (coord: LocationCoordinate) => {
     setSelectedLocation(coord);
@@ -77,16 +88,14 @@ export default function MapSelectScreen() {
     });
   };
 
-  const mapHeight = SCREEN_HEIGHT > 750 ? 320 : 270;
+  // Dynamic map height so all elements fit cleanly without scrolling
+  const mapHeight = SCREEN_HEIGHT > 780 ? 330 : SCREEN_HEIGHT > 680 ? 280 : 230;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Navigation Bar matching Reference 2 */}
+      <View style={styles.container}>
+        {/* Navigation Bar matching Step 2 and Reference */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -104,46 +113,48 @@ export default function MapSelectScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Interactive Map */}
-        <View style={styles.mapContainer}>
+        {/* Center Content: Map & Address Card */}
+        <View style={styles.mainContent}>
+          {/* Interactive Map with Quick Chips */}
           <InteractiveKioskMap
             initialLatitude={initLat}
             initialLongitude={initLng}
-            initialAddress={selectedLocation.address}
-            initialBarangay={selectedLocation.barangay}
+            initialAddress={initialAddress}
+            initialBarangay={initialBarangay}
             onLocationSelect={handleLocationChange}
             height={mapHeight}
             showQuickChips={true}
             showDetailsCard={false}
           />
-        </View>
 
-        {/* Inset Address Card matching Reference 2 */}
-        <View style={styles.addressCard}>
-          <View style={styles.addressLabelRow}>
-            <Text style={styles.addressLabel}>Address</Text>
-            {selectedLocation.barangay ? (
-              <Text style={styles.brgyPill}>Brgy. {selectedLocation.barangay}</Text>
-            ) : null}
+          {/* Inset Address Card matching Reference */}
+          <View style={styles.addressCard}>
+            <View style={styles.addressLabelRow}>
+              <Text style={styles.addressLabel}>Address</Text>
+              {selectedLocation.barangay ? (
+                <Text style={styles.brgyPill}>Brgy. {selectedLocation.barangay}</Text>
+              ) : null}
+            </View>
+            <TextInput
+              style={styles.addressInput}
+              value={addressInput}
+              onChangeText={setAddressInput}
+              placeholder="Enter street, building, or landmark"
+              placeholderTextColor="#94A3B8"
+            />
           </View>
-          <TextInput
-            style={styles.addressInput}
-            value={addressInput}
-            onChangeText={setAddressInput}
-            placeholder="Enter street, building, or landmark"
-            placeholderTextColor="#94A3B8"
-          />
         </View>
 
-        {/* 3 Minimal Carousel Dots (Third Dot Active) */}
-        <View style={styles.dotsRow}>
-          <View style={styles.dot} />
-          <View style={styles.dot} />
-          <View style={[styles.dot, styles.dotActive]} />
-        </View>
-
-        {/* Bottom Section with Stadium Pill Button */}
+        {/* Bottom Section (Matching Step 1 and Step 2) */}
         <View style={styles.bottomSection}>
+          {/* 3 Minimal Carousel Dots (Third Dot Active) */}
+          <View style={styles.dotsRow}>
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.dotActive]} />
+          </View>
+
+          {/* Stadium Pill Button */}
           <TouchableOpacity
             style={styles.pillButton}
             onPress={handleProceed}
@@ -155,7 +166,7 @@ export default function MapSelectScreen() {
           {/* Clean Home Indicator Bar */}
           <View style={styles.homeIndicator} />
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -165,16 +176,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContent: {
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: Spacing.xl,
+    justifyContent: 'space-between',
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
-    minHeight: '100%',
-    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     position: 'relative',
     paddingTop: Spacing.xs,
   },
@@ -206,8 +218,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     maxWidth: 290,
   },
-  mapContainer: {
-    marginVertical: Spacing.xs,
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
   },
   addressCard: {
     backgroundColor: '#FFFFFF',
@@ -216,7 +229,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
-    marginVertical: Spacing.xs,
+    marginTop: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -227,7 +240,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   addressLabel: {
     fontSize: 11,
@@ -249,12 +262,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 0,
   },
+  bottomSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingBottom: Spacing.xs,
+  },
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginVertical: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   dot: {
     width: 7,
@@ -265,11 +283,6 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 20,
     backgroundColor: Colors.indigo,
-  },
-  bottomSection: {
-    width: '100%',
-    alignItems: 'center',
-    paddingBottom: Spacing.xs,
   },
   pillButton: {
     width: '100%',

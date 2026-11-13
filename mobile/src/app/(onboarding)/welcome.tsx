@@ -3,14 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { KixCleenLogo } from '../../components/common/KixCleenLogo';
-import { OnboardingIllustration } from '../../components/common/OnboardingIllustration';
 import { Colors, Spacing } from '../../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -19,17 +18,17 @@ export default function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        {/* Brand Logo Header */}
-        <View style={styles.logoWrapper}>
-          <KixCleenLogo width={140} height={40} />
-        </View>
+        {/* Top spacer */}
+        <View style={styles.topSpacer} />
 
-        {/* Hero Vector Artwork */}
-        <View style={styles.illustrationWrapper}>
-          <OnboardingIllustration width={260} height={210} />
+        {/* Central Hero: KixCleen Logo (Replaces previous vector character) */}
+        <View style={styles.logoHeroWrapper}>
+          <View style={styles.logoSoftWash}>
+            <KixCleenLogo width={210} height={110} />
+          </View>
         </View>
 
         {/* Text Section */}
@@ -40,7 +39,7 @@ export default function WelcomeScreen() {
           </Text>
         </View>
 
-        {/* 3 Minimal Carousel Dots */}
+        {/* 3 Minimal Carousel Dots (First Dot Active) */}
         <View style={styles.dotsRow}>
           <View style={[styles.dot, styles.dotActive]} />
           <View style={styles.dot} />
@@ -76,19 +75,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: SCREEN_HEIGHT > 700 ? Spacing.xl : Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  logoWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: SCREEN_HEIGHT > 750 ? Spacing.md : Spacing.xs,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xs,
   },
-  illustrationWrapper: {
+  topSpacer: {
+    height: SCREEN_HEIGHT > 750 ? 24 : 12,
+  },
+  logoHeroWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: Spacing.md,
+  },
+  logoSoftWash: {
+    width: 220,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textSection: {
     alignItems: 'center',
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginVertical: Spacing.lg,
+    marginVertical: Spacing.md,
   },
   dot: {
     width: 7,
@@ -124,6 +128,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1',
   },
   dotActive: {
+    width: 20,
     backgroundColor: Colors.indigo,
   },
   bottomSection: {

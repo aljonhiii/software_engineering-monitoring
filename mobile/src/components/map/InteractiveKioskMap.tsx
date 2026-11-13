@@ -38,15 +38,64 @@ const DEFAULT_LAT = 6.9214;
 const DEFAULT_LNG = 122.0790;
 const DEFAULT_CITY = 'Zamboanga City';
 
-// Popular barangays/landmarks in Zamboanga City for quick navigation
-const POPULAR_AREAS = [
-  { name: 'Canelar / KCC', lat: 6.9214, lng: 122.0790, brgy: 'Canelar' },
-  { name: 'Pueblo / City Hall', lat: 6.9042, lng: 122.0738, brgy: 'Zone IV (Poblacion)' },
-  { name: 'Tetuan', lat: 6.9248, lng: 122.0915, brgy: 'Tetuan' },
-  { name: 'Guiwan', lat: 6.9387, lng: 122.1025, brgy: 'Guiwan' },
-  { name: 'Pasonanca', lat: 6.9530, lng: 122.0745, brgy: 'Pasonanca' },
-  { name: 'Santa Maria', lat: 6.9312, lng: 122.0684, brgy: 'Santa Maria' },
-  { name: 'Tumaga', lat: 6.9395, lng: 122.0831, brgy: 'Tumaga' },
+// Accurate popular landmarks in Zamboanga City with precise coordinates & barangays
+export const POPULAR_AREAS = [
+  {
+    id: 'canelar',
+    name: 'Canelar / KCC',
+    lat: 6.9214,
+    lng: 122.0790,
+    brgy: 'Canelar',
+    address: 'Gov. Camins Ave (Near KCC Mall)',
+  },
+  {
+    id: 'pueblo',
+    name: 'Pueblo / City Hall',
+    lat: 6.9042,
+    lng: 122.0738,
+    brgy: 'Zone IV (Poblacion)',
+    address: 'N.S. Valderrosa St (City Hall)',
+  },
+  {
+    id: 'tetuan',
+    name: 'Tetuan',
+    lat: 6.9248,
+    lng: 122.0915,
+    brgy: 'Tetuan',
+    address: 'Veterans Ave / Don Alfaro St',
+  },
+  {
+    id: 'guiwan',
+    name: 'Guiwan',
+    lat: 6.9387,
+    lng: 122.1025,
+    brgy: 'Guiwan',
+    address: 'MCLL Highway, Guiwan',
+  },
+  {
+    id: 'santamaria',
+    name: 'Santa Maria',
+    lat: 6.9312,
+    lng: 122.0684,
+    brgy: 'Santa Maria',
+    address: 'Santa Maria Road',
+  },
+  {
+    id: 'pasonanca',
+    name: 'Pasonanca',
+    lat: 6.9530,
+    lng: 122.0745,
+    brgy: 'Pasonanca',
+    address: 'Pasonanca Road',
+  },
+  {
+    id: 'tumaga',
+    name: 'Tumaga',
+    lat: 6.9395,
+    lng: 122.0831,
+    brgy: 'Tumaga',
+    address: 'Tumaga Por Centro',
+  },
 ];
 
 function generateLeafletHTML(lat: number, lng: number) {
@@ -109,8 +158,7 @@ function generateLeafletHTML(lat: number, lng: number) {
       100% { transform: scale(1.6); opacity: 0; }
     }
     .leaflet-control-attribution {
-      font-size: 9px !important;
-      opacity: 0.7;
+      display: none !important;
     }
   </style>
 </head>
@@ -121,8 +169,9 @@ function generateLeafletHTML(lat: number, lng: number) {
     var currentLat = ${lat};
     var currentLng = ${lng};
     
+    // zoomControl is disabled for clean native look matching reference design
     var map = L.map('map', {
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: false
     }).setView([currentLat, currentLng], 16);
 
@@ -198,7 +247,6 @@ export function InteractiveKioskMap({
   });
   const [address, setAddress] = useState<string>(initialAddress);
   const [barangay, setBarangay] = useState<string>(initialBarangay);
-  const [isResolvingAddress, setIsResolvingAddress] = useState<boolean>(false);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const webIframeRef = useRef<any>(null);
   const nativeWebviewRef = useRef<any>(null);
@@ -220,7 +268,7 @@ export function InteractiveKioskMap({
 
   const fallbackAddress = useCallback(
     (lat: number, lng: number) => {
-      const defaultAddr = address || `Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const defaultAddr = address || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       onLocationSelect({
         latitude: lat,
         longitude: lng,
@@ -233,11 +281,31 @@ export function InteractiveKioskMap({
     [address, barangay, onLocationSelect]
   );
 
-  // Reverse geocode via Nominatim when coordinates change
+  // Reverse geocode via Nominatim when coordinates change through manual dragging
   const resolveAddressFromCoords = useCallback(
     async (lat: number, lng: number) => {
-      setIsResolvingAddress(true);
       try {
+        // First check if coordinates match any preset area
+        const matchedArea = POPULAR_AREAS.find((area) => {
+          const dLat = Math.abs(area.lat - lat);
+          const dLng = Math.abs(area.lng - lng);
+          return dLat < 0.003 && dLng < 0.003;
+        });
+
+        if (matchedArea) {
+          setAddress(matchedArea.address);
+          setBarangay(matchedArea.brgy);
+          onLocationSelect({
+            latitude: lat,
+            longitude: lng,
+            address: matchedArea.address,
+            barangay: matchedArea.brgy,
+            city: DEFAULT_CITY,
+            locationName: `${matchedArea.address}, Brgy. ${matchedArea.brgy}`,
+          });
+          return;
+        }
+
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
           {
@@ -257,9 +325,23 @@ export function InteractiveKioskMap({
             resolvedAddr = data.display_name?.split(',')[0] || `Point at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
           }
 
-          const detectedBrgy = suburb || barangay || '';
+          // Pick most accurate barangay for Zamboanga City
+          let detectedBrgy = suburb;
+          if (!detectedBrgy) {
+            let closest = POPULAR_AREAS[0];
+            let minDist = Infinity;
+            for (const a of POPULAR_AREAS) {
+              const dist = Math.hypot(a.lat - lat, a.lng - lng);
+              if (dist < minDist) {
+                minDist = dist;
+                closest = a;
+              }
+            }
+            detectedBrgy = closest.brgy;
+          }
+
           setAddress(resolvedAddr);
-          if (detectedBrgy) setBarangay(detectedBrgy);
+          setBarangay(detectedBrgy);
 
           onLocationSelect({
             latitude: lat,
@@ -274,11 +356,9 @@ export function InteractiveKioskMap({
         }
       } catch {
         fallbackAddress(lat, lng);
-      } finally {
-        setIsResolvingAddress(false);
       }
     },
-    [barangay, fallbackAddress, onLocationSelect]
+    [fallbackAddress, onLocationSelect]
   );
 
   const handleCoordinateUpdate = useCallback(
@@ -319,10 +399,27 @@ export function InteractiveKioskMap({
     }
   };
 
-  const panToLocation = (lat: number, lng: number, brgyName?: string) => {
+  const panToLocation = (lat: number, lng: number, brgyName?: string, customAddress?: string) => {
     setCoords({ latitude: lat, longitude: lng });
+    const targetBrgy = brgyName || barangay;
+    const targetAddr = customAddress || address;
+
     if (brgyName) setBarangay(brgyName);
-    resolveAddressFromCoords(lat, lng);
+    if (customAddress) setAddress(customAddress);
+
+    // If preset address and barangay provided, synchronously notify without Nominatim overwrite
+    if (customAddress && brgyName) {
+      onLocationSelect({
+        latitude: lat,
+        longitude: lng,
+        address: targetAddr,
+        barangay: targetBrgy,
+        city: DEFAULT_CITY,
+        locationName: `${targetAddr}, Brgy. ${targetBrgy}`,
+      });
+    } else {
+      resolveAddressFromCoords(lat, lng);
+    }
 
     const msg = JSON.stringify({ action: 'SET_CENTER', latitude: lat, longitude: lng });
     if (Platform.OS === 'web' && webIframeRef.current) {
@@ -342,36 +439,40 @@ export function InteractiveKioskMap({
       {showQuickChips && (
         <View style={styles.quickAreaContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.areaScroll}>
-            {POPULAR_AREAS.map((area, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.areaChip,
-                  coords.latitude === area.lat && styles.areaChipActive,
-                ]}
-                onPress={() => panToLocation(area.lat, area.lng, area.brgy)}
-              >
-                <Feather
-                  name="map-pin"
-                  size={11}
-                  color={coords.latitude === area.lat ? '#FFFFFF' : '#475569'}
-                />
-                <Text
+            {POPULAR_AREAS.map((area, idx) => {
+              const isActive = Math.abs(coords.latitude - area.lat) < 0.001 && Math.abs(coords.longitude - area.lng) < 0.001;
+              return (
+                <TouchableOpacity
+                  key={idx}
                   style={[
-                    styles.areaChipText,
-                    coords.latitude === area.lat && styles.areaChipTextActive,
+                    styles.areaChip,
+                    isActive && styles.areaChipActive,
                   ]}
+                  onPress={() => panToLocation(area.lat, area.lng, area.brgy, area.address)}
+                  activeOpacity={0.8}
                 >
-                  {area.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Feather
+                    name="map-pin"
+                    size={11}
+                    color={isActive ? '#FFFFFF' : '#64748B'}
+                  />
+                  <Text
+                    style={[
+                      styles.areaChipText,
+                      isActive && styles.areaChipTextActive,
+                    ]}
+                  >
+                    {area.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
 
       {/* Map View Frame */}
-      <View style={[styles.mapFrame, { height: typeof height === 'number' ? height : 360 }]}>
+      <View style={[styles.mapFrame, { height: typeof height === 'number' ? height : 300 }]}>
         {Platform.OS === 'web' ? (
           <iframe
             ref={webIframeRef}
@@ -395,21 +496,6 @@ export function InteractiveKioskMap({
           />
         )}
 
-        {/* Live Coordinate Badge Overlay */}
-        <View style={styles.coordsFloatingBadge}>
-          <Feather name="navigation" size={13} color={Colors.accent} />
-          <Text style={styles.coordsText}>
-            Lat: {coords.latitude.toFixed(5)}, Lng: {coords.longitude.toFixed(5)}
-          </Text>
-          {isResolvingAddress && <ActivityIndicator size="small" color={Colors.accent} style={{ marginLeft: 4 }} />}
-        </View>
-
-        {/* Floating Instruction Overlay */}
-        <View style={styles.tipOverlay}>
-          <Feather name="info" size={12} color={Colors.textSecondary} />
-          <Text style={styles.tipText}>Tap map or drag the pin to set kiosk installation point</Text>
-        </View>
-
         {/* Floating Crosshair Button matching reference */}
         <TouchableOpacity
           style={styles.gpsCrosshairBtn}
@@ -425,7 +511,7 @@ export function InteractiveKioskMap({
         </TouchableOpacity>
       </View>
 
-      {/* Address & Barangay Manual Overrides */}
+      {/* Address & Barangay Manual Overrides (if enabled) */}
       {showDetailsCard && (
         <View style={styles.detailsCard}>
           <View style={styles.inputGroup}>
@@ -496,15 +582,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   quickAreaContainer: {
-    marginBottom: Spacing.sm,
-  },
-  quickAreaLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 10,
   },
   areaScroll: {
     gap: 8,
@@ -517,9 +595,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#E2E8F0',
   },
   areaChipActive: {
     backgroundColor: Colors.indigo,
@@ -535,58 +613,16 @@ const styles = StyleSheet.create({
   },
   mapFrame: {
     position: 'relative',
-    borderRadius: BorderRadius.lg,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#e2e8f0',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     ...Shadows.small,
   },
   webview: {
     flex: 1,
     backgroundColor: '#e5e7eb',
-  },
-  coordsFloatingBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    backgroundColor: 'rgba(16, 57, 79, 0.92)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  coordsText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  tipOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tipText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '500',
   },
   gpsCrosshairBtn: {
     position: 'absolute',
@@ -600,11 +636,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.16,
     shadowRadius: 5,
     elevation: 4,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    zIndex: 10,
   },
   detailsCard: {
     marginTop: Spacing.md,

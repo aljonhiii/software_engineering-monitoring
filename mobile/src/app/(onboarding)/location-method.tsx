@@ -3,12 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -38,9 +37,7 @@ export default function LocationMethodScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setIsRequestingGps(false);
-        setGpsError(
-          'Location access was not granted. Please select your location manually on the map.'
-        );
+        setGpsError('Location access was not granted. Please select your location manually on the map.');
         Alert.alert(
           'Permission Required',
           'GPS location access was not granted. You can still select your kiosk location manually on the map.',
@@ -79,9 +76,7 @@ export default function LocationMethodScreen() {
     } catch (err: any) {
       console.warn('GPS location fetch error:', err);
       setIsRequestingGps(false);
-      setGpsError(
-        'Unable to detect GPS position. Please check your connection or choose manual map selection.'
-      );
+      setGpsError('Unable to detect GPS position. Please check your connection or choose manual map selection.');
       Alert.alert(
         'GPS Service Unavailable',
         'Could not obtain an accurate GPS fix. You can pinpoint your kiosk location manually on the map.',
@@ -101,10 +96,10 @@ export default function LocationMethodScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        {/* Navigation Header */}
+        {/* Top Header with Safe Area Spacing */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -116,16 +111,14 @@ export default function LocationMethodScreen() {
           <View style={styles.titleWrapper}>
             <Text style={styles.screenTitle}>Kiosk Location</Text>
             <Text style={styles.screenSubtitle}>
-              Where would you like to place your KixCleen kiosk? Choose how you want to register its spot.
+              Where would you like to place your KixCleen kiosk?
             </Text>
           </View>
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        {/* Options List */}
+        <View style={styles.cardsContainer}>
           {gpsError && (
             <View style={styles.errorBanner}>
               <Feather name="alert-circle" size={15} color={Colors.red} />
@@ -133,7 +126,7 @@ export default function LocationMethodScreen() {
             </View>
           )}
 
-          {/* Option 1 Card: GPS */}
+          {/* Option 1: Current Location */}
           <TouchableOpacity
             style={[
               styles.methodCard,
@@ -142,46 +135,35 @@ export default function LocationMethodScreen() {
             onPress={() => setSelectedMethod('gps')}
             activeOpacity={0.85}
           >
-            <View style={styles.cardTopRow}>
-              <View
-                style={[
-                  styles.iconWash,
-                  selectedMethod === 'gps' && styles.iconWashActive,
-                ]}
-              >
-                <Feather
-                  name="navigation"
-                  size={20}
-                  color={selectedMethod === 'gps' ? Colors.indigo : '#64748B'}
-                />
-              </View>
-              <View style={styles.cardHeaderInfo}>
-                <Text style={styles.optionTag}>OPTION 1</Text>
-                <Text style={styles.cardTitle}>Use My Current Location</Text>
-              </View>
-              <View
-                style={[
-                  styles.radioOuter,
-                  selectedMethod === 'gps' && styles.radioOuterActive,
-                ]}
-              >
-                {selectedMethod === 'gps' && <View style={styles.radioInner} />}
-              </View>
+            <View
+              style={[
+                styles.iconWash,
+                selectedMethod === 'gps' && styles.iconWashActive,
+              ]}
+            >
+              <Feather
+                name="navigation"
+                size={20}
+                color={selectedMethod === 'gps' ? Colors.indigo : '#64748B'}
+              />
             </View>
-
-            <Text style={styles.cardDescription}>
-              Detect your exact coordinates automatically while standing at the kiosk installation point.
-            </Text>
-
-            <View style={styles.noteBox}>
-              <Feather name="info" size={13} color={Colors.indigo} />
-              <Text style={styles.noteText}>
-                Make sure you are standing at the exact installation spot.
+            <View style={styles.cardTextContent}>
+              <Text style={styles.cardTitle}>Use current location</Text>
+              <Text style={styles.cardSubtitle}>
+                Detect your physical GPS coordinates standing at the kiosk installation spot.
               </Text>
+            </View>
+            <View
+              style={[
+                styles.radioRing,
+                selectedMethod === 'gps' && styles.radioRingActive,
+              ]}
+            >
+              {selectedMethod === 'gps' && <View style={styles.radioDot} />}
             </View>
           </TouchableOpacity>
 
-          {/* Option 2 Card: Manual Map */}
+          {/* Option 2: Select Manually */}
           <TouchableOpacity
             style={[
               styles.methodCard,
@@ -190,55 +172,45 @@ export default function LocationMethodScreen() {
             onPress={() => setSelectedMethod('manual')}
             activeOpacity={0.85}
           >
-            <View style={styles.cardTopRow}>
-              <View
-                style={[
-                  styles.iconWash,
-                  selectedMethod === 'manual' && styles.iconWashActive,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="map-marker-radius-outline"
-                  size={22}
-                  color={selectedMethod === 'manual' ? Colors.indigo : '#64748B'}
-                />
-              </View>
-              <View style={styles.cardHeaderInfo}>
-                <Text style={styles.optionTag}>OPTION 2</Text>
-                <Text style={styles.cardTitle}>Select Location Manually</Text>
-              </View>
-              <View
-                style={[
-                  styles.radioOuter,
-                  selectedMethod === 'manual' && styles.radioOuterActive,
-                ]}
-              >
-                {selectedMethod === 'manual' && <View style={styles.radioInner} />}
-              </View>
+            <View
+              style={[
+                styles.iconWash,
+                selectedMethod === 'manual' && styles.iconWashActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="map-marker-radius-outline"
+                size={22}
+                color={selectedMethod === 'manual' ? Colors.indigo : '#64748B'}
+              />
             </View>
-
-            <Text style={styles.cardDescription}>
-              Search Zamboanga City barangays and drag the pin to your exact kiosk setup point.
-            </Text>
-
-            <View style={styles.noteBox}>
-              <Feather name="map" size={13} color="#D97706" />
-              <Text style={[styles.noteText, { color: '#92400E' }]}>
-                Pinpoint your exact spot manually (do not assume city center).
+            <View style={styles.cardTextContent}>
+              <Text style={styles.cardTitle}>Select manually on map</Text>
+              <Text style={styles.cardSubtitle}>
+                Browse Zamboanga City barangays and drag the pin to your exact kiosk setup point.
               </Text>
             </View>
+            <View
+              style={[
+                styles.radioRing,
+                selectedMethod === 'manual' && styles.radioRingActive,
+              ]}
+            >
+              {selectedMethod === 'manual' && <View style={styles.radioDot} />}
+            </View>
           </TouchableOpacity>
-        </ScrollView>
-
-        {/* 3 Minimal Carousel Dots (Second Dot Active) */}
-        <View style={styles.dotsRow}>
-          <View style={styles.dot} />
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={styles.dot} />
         </View>
 
-        {/* Bottom Section with Stadium Pill Button */}
+        {/* Bottom Section */}
         <View style={styles.bottomSection}>
+          {/* 3 Minimal Carousel Dots (Second Dot Active) */}
+          <View style={styles.dotsRow}>
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+          </View>
+
+          {/* Stadium Pill Button */}
           <TouchableOpacity
             style={styles.pillButton}
             activeOpacity={0.85}
@@ -248,9 +220,7 @@ export default function LocationMethodScreen() {
             {isRequestingGps ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.pillButtonText}>
-                {selectedMethod === 'gps' ? 'Use Current Location' : 'Select on Map'}
-              </Text>
+              <Text style={styles.pillButtonText}>Continue</Text>
             )}
           </TouchableOpacity>
 
@@ -277,7 +247,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.lg,
     position: 'relative',
     paddingTop: Spacing.xs,
   },
@@ -309,9 +279,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     maxWidth: 290,
   },
-  scrollContent: {
-    paddingVertical: Spacing.xs,
+  cardsContainer: {
     gap: 14,
+    flex: 1,
+    justifyContent: 'center',
   },
   errorBanner: {
     flexDirection: 'row',
@@ -335,6 +306,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -348,16 +322,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 6,
   },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
   iconWash: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
@@ -365,22 +333,21 @@ const styles = StyleSheet.create({
   iconWashActive: {
     backgroundColor: 'rgba(79, 70, 229, 0.12)',
   },
-  cardHeaderInfo: {
+  cardTextContent: {
     flex: 1,
-  },
-  optionTag: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.indigo,
-    letterSpacing: 0.5,
-    marginBottom: 1,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#1E293B',
+    marginBottom: 2,
   },
-  radioOuter: {
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  radioRing: {
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -389,44 +356,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterActive: {
+  radioRingActive: {
     borderColor: Colors.indigo,
   },
-  radioInner: {
+  radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.indigo,
   },
-  cardDescription: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  noteBox: {
-    flexDirection: 'row',
+  bottomSection: {
+    width: '100%',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#475569',
-    lineHeight: 15,
+    paddingBottom: Spacing.xs,
   },
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginVertical: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   dot: {
     width: 7,
@@ -437,11 +386,6 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 20,
     backgroundColor: Colors.indigo,
-  },
-  bottomSection: {
-    width: '100%',
-    alignItems: 'center',
-    paddingBottom: Spacing.xs,
   },
   pillButton: {
     width: '100%',
