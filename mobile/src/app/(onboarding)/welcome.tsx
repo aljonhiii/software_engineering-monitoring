@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { KixCleenLogo } from '../../components/common/KixCleenLogo';
 import { OnboardingIllustration } from '../../components/common/OnboardingIllustration';
 import { Colors, Spacing } from '../../constants/theme';
 
@@ -21,8 +22,10 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        {/* Top spacer to balance illustration vertically */}
-        <View style={styles.topSpacer} />
+        {/* Brand Logo Header */}
+        <View style={styles.logoWrapper}>
+          <KixCleenLogo width={140} height={40} />
+        </View>
 
         {/* Hero Vector Artwork */}
         <View style={styles.illustrationWrapper}>
@@ -76,8 +79,11 @@ const styles = StyleSheet.create({
     paddingTop: SCREEN_HEIGHT > 700 ? Spacing.xl : Spacing.md,
     paddingBottom: Spacing.sm,
   },
-  topSpacer: {
-    height: SCREEN_HEIGHT > 750 ? 20 : 10,
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: SCREEN_HEIGHT > 750 ? Spacing.md : Spacing.xs,
+    paddingBottom: Spacing.xs,
   },
   illustrationWrapper: {
     alignItems: 'center',

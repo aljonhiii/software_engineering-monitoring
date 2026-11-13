@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,6 +18,8 @@ import {
   LocationCoordinate,
 } from '../../components/map/InteractiveKioskMap';
 import { Colors, Spacing } from '../../constants/theme';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function MapSelectScreen() {
   const router = useRouter();
@@ -32,21 +36,27 @@ export default function MapSelectScreen() {
   const [selectedLocation, setSelectedLocation] = useState<LocationCoordinate>({
     latitude: initLat,
     longitude: initLng,
-    address: isGpsMethod ? 'Gov. Camins Ave (Detected GPS Position)' : 'Gov. Camins Ave (Near KCC Mall)',
+    address: isGpsMethod ? 'Gov. Camins Ave (Detected Position)' : 'Gov. Camins Ave (Near KCC Mall)',
     barangay: 'Canelar',
     city: 'Zamboanga City',
     locationName: 'Gov. Camins Ave, Brgy. Canelar',
   });
 
+  const [addressInput, setAddressInput] = useState<string>(selectedLocation.address || '');
+
   const handleLocationChange = (coord: LocationCoordinate) => {
     setSelectedLocation(coord);
+    if (coord.address) {
+      setAddressInput(coord.address);
+    }
   };
 
   const handleProceed = () => {
-    if (!selectedLocation.address || !selectedLocation.address.trim()) {
+    const finalAddress = addressInput.trim() || selectedLocation.address;
+    if (!finalAddress || !finalAddress.trim()) {
       Alert.alert(
         'Address Required',
-        'Please enter a descriptive street or place address for your kiosk installation point.',
+        'Please enter a street or landmark address for your kiosk installation point.',
         [{ text: 'OK' }]
       );
       return;
@@ -57,17 +67,17 @@ export default function MapSelectScreen() {
       params: {
         latitude: String(selectedLocation.latitude),
         longitude: String(selectedLocation.longitude),
-        address: selectedLocation.address,
+        address: finalAddress,
         barangay: selectedLocation.barangay || '',
         city: selectedLocation.city || 'Zamboanga City',
-        locationName: selectedLocation.locationName || selectedLocation.address,
+        locationName: selectedLocation.barangay
+          ? `${finalAddress}, Brgy. ${selectedLocation.barangay}`
+          : finalAddress,
       },
     });
   };
 
-  const formattedAddress = `${selectedLocation.address}${
-    selectedLocation.barangay ? `, Brgy. ${selectedLocation.barangay}` : ''
-  }, ${selectedLocation.city || 'Zamboanga City'}`;
+  const mapHeight = SCREEN_HEIGHT > 750 ? 320 : 270;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -102,16 +112,34 @@ export default function MapSelectScreen() {
             initialAddress={selectedLocation.address}
             initialBarangay={selectedLocation.barangay}
             onLocationSelect={handleLocationChange}
-            height={360}
+            height={mapHeight}
+            showQuickChips={true}
+            showDetailsCard={false}
           />
         </View>
 
         {/* Inset Address Card matching Reference 2 */}
         <View style={styles.addressCard}>
-          <Text style={styles.addressLabel}>Address</Text>
-          <Text style={styles.addressValue} numberOfLines={2}>
-            {formattedAddress}
-          </Text>
+          <View style={styles.addressLabelRow}>
+            <Text style={styles.addressLabel}>Address</Text>
+            {selectedLocation.barangay ? (
+              <Text style={styles.brgyPill}>Brgy. {selectedLocation.barangay}</Text>
+            ) : null}
+          </View>
+          <TextInput
+            style={styles.addressInput}
+            value={addressInput}
+            onChangeText={setAddressInput}
+            placeholder="Enter street, building, or landmark"
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
+
+        {/* 3 Minimal Carousel Dots (Third Dot Active) */}
+        <View style={styles.dotsRow}>
+          <View style={styles.dot} />
+          <View style={styles.dot} />
+          <View style={[styles.dot, styles.dotActive]} />
         </View>
 
         {/* Bottom Section with Stadium Pill Button */}
@@ -138,15 +166,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    paddingBottom: Spacing.xs,
     minHeight: '100%',
     justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xs,
     position: 'relative',
     paddingTop: Spacing.xs,
   },
@@ -162,7 +190,7 @@ const styles = StyleSheet.create({
   },
   titleWrapper: {
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 36,
   },
   screenTitle: {
     fontSize: 20,
@@ -184,35 +212,64 @@ const styles = StyleSheet.create({
   addressCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    marginVertical: Spacing.md,
+    paddingVertical: 10,
+    marginVertical: Spacing.xs,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 1,
+  },
+  addressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
   },
   addressLabel: {
     fontSize: 11,
     color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 4,
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
-  addressValue: {
+  brgyPill: {
+    fontSize: 11,
+    color: Colors.indigo,
+    fontWeight: '600',
+  },
+  addressInput: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1E293B',
     lineHeight: 20,
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: Spacing.xs,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#CBD5E1',
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: Colors.indigo,
   },
   bottomSection: {
     width: '100%',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
   pillButton: {
     width: '100%',

@@ -30,6 +30,8 @@ interface InteractiveKioskMapProps {
   initialBarangay?: string;
   onLocationSelect: (coord: LocationCoordinate) => void;
   height?: number | string;
+  showQuickChips?: boolean;
+  showDetailsCard?: boolean;
 }
 
 const DEFAULT_LAT = 6.9214;
@@ -186,7 +188,9 @@ export function InteractiveKioskMap({
   initialAddress = '',
   initialBarangay = '',
   onLocationSelect,
-  height = 360,
+  height = 320,
+  showQuickChips = true,
+  showDetailsCard = false,
 }: InteractiveKioskMapProps) {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number }>({
     latitude: initialLatitude,
@@ -335,35 +339,36 @@ export function InteractiveKioskMap({
   return (
     <View style={styles.container}>
       {/* Quick Area Jump Pills */}
-      <View style={styles.quickAreaContainer}>
-        <Text style={styles.quickAreaLabel}>Quick jump in Zamboanga City:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.areaScroll}>
-          {POPULAR_AREAS.map((area, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[
-                styles.areaChip,
-                coords.latitude === area.lat && styles.areaChipActive,
-              ]}
-              onPress={() => panToLocation(area.lat, area.lng, area.brgy)}
-            >
-              <Feather
-                name="map-pin"
-                size={12}
-                color={coords.latitude === area.lat ? Colors.textWhite : Colors.petrol}
-              />
-              <Text
+      {showQuickChips && (
+        <View style={styles.quickAreaContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.areaScroll}>
+            {POPULAR_AREAS.map((area, idx) => (
+              <TouchableOpacity
+                key={idx}
                 style={[
-                  styles.areaChipText,
-                  coords.latitude === area.lat && styles.areaChipTextActive,
+                  styles.areaChip,
+                  coords.latitude === area.lat && styles.areaChipActive,
                 ]}
+                onPress={() => panToLocation(area.lat, area.lng, area.brgy)}
               >
-                {area.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+                <Feather
+                  name="map-pin"
+                  size={11}
+                  color={coords.latitude === area.lat ? '#FFFFFF' : '#475569'}
+                />
+                <Text
+                  style={[
+                    styles.areaChipText,
+                    coords.latitude === area.lat && styles.areaChipTextActive,
+                  ]}
+                >
+                  {area.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Map View Frame */}
       <View style={[styles.mapFrame, { height: typeof height === 'number' ? height : 360 }]}>
@@ -421,65 +426,67 @@ export function InteractiveKioskMap({
       </View>
 
       {/* Address & Barangay Manual Overrides */}
-      <View style={styles.detailsCard}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Selected Street / Location Address</Text>
-          <View style={styles.inputRow}>
-            <Feather name="map-pin" size={16} color={Colors.petrol} style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              value={address}
-              placeholder="e.g. Gov. Camins Ave (Near Entrance)"
-              placeholderTextColor={Colors.textMuted}
-              onChangeText={(text) => {
-                setAddress(text);
-                onLocationSelect({
-                  latitude: coords.latitude,
-                  longitude: coords.longitude,
-                  address: text,
-                  barangay,
-                  city: DEFAULT_CITY,
-                  locationName: barangay ? `${text}, Brgy. ${barangay}` : text,
-                });
-              }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.rowTwoCols}>
-          <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.sm }]}>
-            <Text style={styles.inputLabel}>Barangay</Text>
+      {showDetailsCard && (
+        <View style={styles.detailsCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Selected Street / Location Address</Text>
             <View style={styles.inputRow}>
-              <Feather name="home" size={15} color={Colors.textSecondary} style={styles.inputIcon} />
+              <Feather name="map-pin" size={16} color={Colors.petrol} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                value={barangay}
-                placeholder="e.g. Canelar"
+                value={address}
+                placeholder="e.g. Gov. Camins Ave (Near Entrance)"
                 placeholderTextColor={Colors.textMuted}
                 onChangeText={(text) => {
-                  setBarangay(text);
+                  setAddress(text);
                   onLocationSelect({
                     latitude: coords.latitude,
                     longitude: coords.longitude,
-                    address,
-                    barangay: text,
+                    address: text,
+                    barangay,
                     city: DEFAULT_CITY,
-                    locationName: text ? `${address}, Brgy. ${text}` : address,
+                    locationName: barangay ? `${text}, Brgy. ${barangay}` : text,
                   });
                 }}
               />
             </View>
           </View>
 
-          <View style={[styles.inputGroup, { flex: 1, marginLeft: Spacing.sm }]}>
-            <Text style={styles.inputLabel}>City</Text>
-            <View style={[styles.inputRow, styles.inputRowDisabled]}>
-              <Feather name="globe" size={15} color={Colors.textSecondary} style={styles.inputIcon} />
-              <Text style={styles.readOnlyText}>{DEFAULT_CITY}</Text>
+          <View style={styles.rowTwoCols}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.sm }]}>
+              <Text style={styles.inputLabel}>Barangay</Text>
+              <View style={styles.inputRow}>
+                <Feather name="home" size={15} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={barangay}
+                  placeholder="e.g. Canelar"
+                  placeholderTextColor={Colors.textMuted}
+                  onChangeText={(text) => {
+                    setBarangay(text);
+                    onLocationSelect({
+                      latitude: coords.latitude,
+                      longitude: coords.longitude,
+                      address,
+                      barangay: text,
+                      city: DEFAULT_CITY,
+                      locationName: text ? `${address}, Brgy. ${text}` : address,
+                    });
+                  }}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: Spacing.sm }]}>
+              <Text style={styles.inputLabel}>City</Text>
+              <View style={[styles.inputRow, styles.inputRowDisabled]}>
+                <Feather name="globe" size={15} color={Colors.textSecondary} style={styles.inputIcon} />
+                <Text style={styles.readOnlyText}>{DEFAULT_CITY}</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -515,16 +522,16 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   areaChipActive: {
-    backgroundColor: Colors.petrol,
-    borderColor: Colors.petrol,
+    backgroundColor: Colors.indigo,
+    borderColor: Colors.indigo,
   },
   areaChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.petrol,
+    color: '#475569',
   },
   areaChipTextActive: {
-    color: Colors.textWhite,
+    color: '#FFFFFF',
   },
   mapFrame: {
     position: 'relative',
