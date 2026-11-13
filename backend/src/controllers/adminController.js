@@ -103,6 +103,7 @@ function formatAdminBuyer(u, owners, kiosks) {
         status: k.status || 'offline',
         isActive: Boolean(k.is_active ?? 1),
         assignedAt: o.assigned_at,
+        launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
       };
     })
     .filter(Boolean);
@@ -585,6 +586,11 @@ export async function createAdminBuyer(req, res) {
       companyName = '',
       kioskIds = [],
       allowTransfer = false,
+      createDedicatedKiosk = false,
+      dedicatedKioskId,
+      dedicatedKioskName,
+      dedicatedKioskCity,
+      dedicatedKioskAddress,
     } = req.body;
 
     if (!fullName || !email) {
@@ -623,12 +629,65 @@ export async function createAdminBuyer(req, res) {
       });
     }
 
-    // Validate kiosk assignments if provided
-    const requestedKioskIds = Array.isArray(kioskIds)
-      ? kioskIds.filter(Boolean)
-      : [];
+    const buyerId = `USR-BUYER-${Date.now().toString().slice(-6)}`;
+    const rawInviteToken = crypto.randomBytes(24).toString('hex');
+    const tokenHash = hashInviteToken(rawInviteToken);
+    const expiresAtDate = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
 
+    // Dedicated Kiosk Provisioning for this Owner
+    let provisionedKiosk = null;
+    const requestedKioskIds = Array.isArray(kioskIds) ? [...kioskIds.filter(Boolean)] : [];
+
+    const shouldCreateDedicated = Boolean(
+      createDedicatedKiosk === true ||
+      createDedicatedKiosk === 'true' ||
+      dedicatedKioskId ||
+      dedicatedKioskName
+    );
+
+    if (shouldCreateDedicated) {
+      let targetKioskId =
+        (dedicatedKioskId && String(dedicatedKioskId).trim().toUpperCase()) ||
+        `KIOSK-${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '')}-01`;
+
+      let counter = 1;
+      while (kiosks.some((k) => k.id.toLowerCase() === targetKioskId.toLowerCase())) {
+        counter++;
+        targetKioskId = `KIOSK-${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '')}-0${counter}`;
+      }
+
+      const targetKioskName =
+        (dedicatedKioskName && String(dedicatedKioskName).trim()) ||
+        `KixCleen Vendo — ${String(fullName).trim()} Branch`;
+      const targetCity = (dedicatedKioskCity && String(dedicatedKioskCity).trim()) || 'Metro Manila';
+      const targetAddress =
+        (dedicatedKioskAddress && String(dedicatedKioskAddress).trim()) || 'Main Commercial Station';
+
+      provisionedKiosk = {
+        id: targetKioskId,
+        name: targetKioskName,
+        city: targetCity,
+        address: targetAddress,
+        location: targetAddress,
+        status: 'online',
+        is_active: 1,
+        is_public: 1,
+        operating_hours: '8:00 AM - 10:00 PM Daily',
+        services_offered: 'Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer',
+        door_locked: 0,
+        water_level_pct: 100,
+        soap_level_pct: 100,
+        current_activity: 'Idle - Ready for customer',
+      };
+
+      if (!requestedKioskIds.includes(targetKioskId)) {
+        requestedKioskIds.push(targetKioskId);
+      }
+    }
+
+    // Validate any other requested kiosk assignments if provided
     for (const kId of requestedKioskIds) {
+      if (provisionedKiosk && kId === provisionedKiosk.id) continue;
       const kExists = kiosks.some((k) => k.id === kId);
       if (!kExists) {
         return res.status(404).json({
@@ -645,11 +704,6 @@ export async function createAdminBuyer(req, res) {
         });
       }
     }
-
-    const buyerId = `USR-BUYER-${Date.now().toString().slice(-6)}`;
-    const rawInviteToken = crypto.randomBytes(24).toString('hex');
-    const tokenHash = hashInviteToken(rawInviteToken);
-    const expiresAtDate = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
 
     if (db) {
       await db.query(
@@ -668,10 +722,34 @@ export async function createAdminBuyer(req, res) {
         ]
       );
 
+      if (provisionedKiosk) {
+        await db.query(
+          `INSERT INTO kiosks 
+           (id, name, address, city, location, latitude, longitude, status, is_active, is_public, operating_hours, services_offered, door_locked, water_level_pct, soap_level_pct, current_activity, last_heartbeat)
+           VALUES (?, ?, ?, ?, ?, NULL, NULL, 'online', TRUE, TRUE, ?, ?, FALSE, 100, 100, 'Idle - Ready for customer', NOW())`,
+          [
+            provisionedKiosk.id,
+            provisionedKiosk.name,
+            provisionedKiosk.address,
+            provisionedKiosk.city,
+            provisionedKiosk.location,
+            provisionedKiosk.operating_hours,
+            provisionedKiosk.services_offered,
+          ]
+        );
+
+        await db.query(
+          `INSERT INTO machine_status (kiosk_id, status, door_locked, water_level_pct, soap_level_pct, current_activity, last_heartbeat)
+           VALUES (?, 'online', FALSE, 100, 100, 'Idle - Ready for customer', NOW())
+           ON DUPLICATE KEY UPDATE status = 'online'`,
+          [provisionedKiosk.id]
+        );
+      }
+
       for (const kId of requestedKioskIds) {
         await db.query(
           `INSERT INTO kiosk_owners (kiosk_id, buyer_id, assigned_by, notes)
-           VALUES (?, ?, ?, 'Assigned during buyer onboarding')
+           VALUES (?, ?, ?, 'Dedicated kiosk assigned on owner onboarding')
            ON DUPLICATE KEY UPDATE buyer_id = VALUES(buyer_id), assigned_by = VALUES(assigned_by), assigned_at = NOW()`,
           [kId, buyerId, req.user.id]
         );
@@ -695,6 +773,30 @@ export async function createAdminBuyer(req, res) {
         updated_at: nowIso,
       });
 
+      if (provisionedKiosk) {
+        memoryStore.kiosks.push({
+          ...provisionedKiosk,
+          latitude: null,
+          longitude: null,
+          last_heartbeat: nowIso,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+
+        memoryStore.machine_status.push({
+          kiosk_id: provisionedKiosk.id,
+          status: 'online',
+          door_locked: 0,
+          water_level_pct: 100,
+          soap_level_pct: 100,
+          current_order_id: null,
+          current_activity: 'Idle - Ready for customer',
+          error_code: null,
+          last_heartbeat: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
       for (const kId of requestedKioskIds) {
         const existingIdx = memoryStore.kiosk_owners.findIndex((o) => o.kiosk_id === kId);
         if (existingIdx >= 0) {
@@ -707,7 +809,7 @@ export async function createAdminBuyer(req, res) {
             kiosk_id: kId,
             buyer_id: buyerId,
             assigned_by: req.user.id,
-            notes: 'Assigned during buyer onboarding',
+            notes: 'Dedicated kiosk assigned on owner onboarding',
             assigned_at: nowIso,
           });
         }
@@ -718,10 +820,26 @@ export async function createAdminBuyer(req, res) {
     const createdBuyer = updatedData.users.find((u) => u.id === buyerId);
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
 
+    const launcherUrl = provisionedKiosk
+      ? `http://localhost:8082/?kioskId=${provisionedKiosk.id}`
+      : requestedKioskIds[0]
+      ? `http://localhost:8082/?kioskId=${requestedKioskIds[0]}`
+      : 'http://localhost:8082';
+
     res.status(201).json({
       success: true,
-      message: `Buyer account created for ${fullName}. Send the invitation link so the buyer can set their password.`,
+      message: `Owner account created for ${fullName} with dedicated kiosk ${provisionedKiosk?.id || requestedKioskIds[0] || 'assigned'}.`,
       buyer: formatAdminBuyer(createdBuyer, updatedData.owners, updatedData.kiosks),
+      dedicatedKiosk: provisionedKiosk
+        ? {
+            id: provisionedKiosk.id,
+            name: provisionedKiosk.name,
+            city: provisionedKiosk.city,
+            address: provisionedKiosk.address,
+            launcherUrl,
+          }
+        : null,
+      launcherUrl,
       invitation: {
         token: rawInviteToken,
         setupPath: invitationPath,

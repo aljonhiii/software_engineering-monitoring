@@ -239,6 +239,33 @@ export async function changePassword(req, res) {
   }
 }
 
+async function resolveAssignedKiosksList(kioskIds) {
+  if (!kioskIds || kioskIds.length === 0) return [];
+  const db = await getDbConnection();
+  if (db) {
+    const [rows] = await db.query(
+      'SELECT id, name, city, address, location, status FROM kiosks WHERE id IN (?)',
+      [kioskIds]
+    );
+    return rows.map((k) => ({
+      ...k,
+      launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
+    }));
+  } else {
+    return memoryStore.kiosks
+      .filter((k) => kioskIds.includes(k.id))
+      .map((k) => ({
+        id: k.id,
+        name: k.name,
+        city: k.city,
+        address: k.address,
+        location: k.location,
+        status: k.status,
+        launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
+      }));
+  }
+}
+
 /**
  * Verify a buyer's one-time account invitation / password setup token.
  */
@@ -288,6 +315,7 @@ export async function verifyInviteToken(req, res) {
     }
 
     const assignedKioskIds = await getAuthorizedKioskIdsForUser(user);
+    const assignedKiosks = await resolveAssignedKiosksList(assignedKioskIds);
 
     res.json({
       success: true,
@@ -299,6 +327,7 @@ export async function verifyInviteToken(req, res) {
         companyName: user.company_name || null,
         role: user.role,
         assignedKioskIds: assignedKioskIds || [],
+        assignedKiosks: assignedKiosks || [],
       },
     });
   } catch (err) {
@@ -376,6 +405,7 @@ export async function completeAccountSetup(req, res) {
     }
 
     const assignedKioskIds = await getAuthorizedKioskIdsForUser(user);
+    const assignedKiosks = await resolveAssignedKiosksList(assignedKioskIds);
 
     const jwtToken = jwt.sign(
       {
@@ -402,6 +432,7 @@ export async function completeAccountSetup(req, res) {
         role: user.role,
         accountStatus: 'active',
         assignedKioskIds: assignedKioskIds || [],
+        assignedKiosks: assignedKiosks || [],
       },
     });
   } catch (err) {
