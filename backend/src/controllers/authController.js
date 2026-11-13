@@ -393,10 +393,10 @@ export async function completeAccountSetup(req, res) {
     let finalUsername = user.username;
     if (username && String(username).trim()) {
       const cleanUsername = String(username).trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
-      if (cleanUsername.length < 3) {
+      if (cleanUsername.length < 3 || cleanUsername.length > 30) {
         return res.status(400).json({
           success: false,
-          message: 'Username must be at least 3 characters.',
+          message: 'Username must be between 3 and 30 characters.',
         });
       }
 

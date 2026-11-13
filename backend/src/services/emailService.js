@@ -92,9 +92,28 @@ function getTransporter() {
 }
 
 /**
+ * Sanitize strings against HTML / XSS injection in email clients.
+ */
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
  * Generate responsive HTML email for buyer account activation.
  */
 function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, expiresAt }) {
+  const safeFullName = escapeHtml(fullName);
+  const safeUsername = escapeHtml(username);
+  const safeKioskId = dedicatedKiosk ? escapeHtml(dedicatedKiosk.id) : '';
+  const safeKioskName = dedicatedKiosk ? escapeHtml(dedicatedKiosk.name || 'Dedicated KixCleen Machine') : '';
+  const safeKioskCity = dedicatedKiosk ? escapeHtml(dedicatedKiosk.city || 'Metro Manila') : '';
+
   const kioskSnippet = dedicatedKiosk
     ? `
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
@@ -102,10 +121,10 @@ function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, exp
           Assigned Dedicated Kiosk
         </p>
         <p style="margin: 0; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${dedicatedKiosk.id}
+          ${safeKioskId}
         </p>
         <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">
-          ${dedicatedKiosk.name || 'Dedicated KixCleen Machine'} &bull; ${dedicatedKiosk.city || 'Metro Manila'}
+          ${safeKioskName} &bull; ${safeKioskCity}
         </p>
       </div>
     `
@@ -147,14 +166,14 @@ function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, exp
         <tr>
           <td style="padding: 32px;">
             <h1 style="margin: 0 0 12px 0; font-size: 22px; font-weight: 700; color: #0f172a;">
-              Welcome, ${fullName}!
+              Welcome, ${safeFullName}!
             </h1>
             <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #334155;">
               A buyer owner account has been created for you on the KixCleen Platform. You can now activate your account, configure your password, and monitor your kiosk terminals in real time.
             </p>
 
             <div style="background-color: #f1f5f9; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #334155;">
-              <strong>Username:</strong> <code style="background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${username}</code>
+              <strong>Username:</strong> <code style="background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${safeUsername}</code>
             </div>
 
             ${kioskSnippet}

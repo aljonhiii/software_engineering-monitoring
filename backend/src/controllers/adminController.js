@@ -1003,6 +1003,8 @@ export async function updateAdminBuyerStatus(req, res) {
   }
 }
 
+const emailRateLimits = new Map();
+
 /**
  * POST /api/admin/buyers/:id/invite
  * Initiate or resend account invitation / password setup link for a buyer.
@@ -1026,6 +1028,20 @@ export async function generateBuyerInvite(req, res) {
         setupStatus: 'done',
       });
     }
+
+    // Rate Limiting Cooldown: prevent spamming victim inboxes or SMTP server
+    const lastSent = emailRateLimits.get(id);
+    const now = Date.now();
+    const COOLDOWN_SECONDS = 30;
+    if (lastSent && now - lastSent < COOLDOWN_SECONDS * 1000) {
+      const remainingSeconds = Math.ceil((COOLDOWN_SECONDS * 1000 - (now - lastSent)) / 1000);
+      return res.status(429).json({
+        success: false,
+        code: 'RATE_LIMITED',
+        message: `An invitation was recently sent. Please wait ${remainingSeconds}s before resending.`,
+      });
+    }
+    emailRateLimits.set(id, now);
 
     const rawInviteToken = crypto.randomBytes(24).toString('hex');
     const tokenHash = hashInviteToken(rawInviteToken);
