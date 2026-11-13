@@ -345,7 +345,7 @@ export async function verifyInviteToken(req, res) {
  */
 export async function completeAccountSetup(req, res) {
   try {
-    const { token, password } = req.body;
+    const { token, password, username, fullName, phone } = req.body;
 
     if (!token || !password) {
       return res.status(400).json({
@@ -389,16 +389,63 @@ export async function completeAccountSetup(req, res) {
       });
     }
 
+    // Handle custom username if provided by the user
+    let finalUsername = user.username;
+    if (username && String(username).trim()) {
+      const cleanUsername = String(username).trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      if (cleanUsername.length < 3) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username must be at least 3 characters.',
+        });
+      }
+
+      // Check if username is already taken by another user
+      if (cleanUsername !== user.username.toLowerCase()) {
+        if (db) {
+          const [exists] = await db.query(
+            'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
+            [cleanUsername, user.id]
+          );
+          if (exists.length > 0) {
+            return res.status(409).json({
+              success: false,
+              message: `Username '${cleanUsername}' is already taken. Please choose another username.`,
+            });
+          }
+        } else {
+          const exists = memoryStore.users.some(
+            (u) => u.id !== user.id && u.username.toLowerCase() === cleanUsername
+          );
+          if (exists) {
+            return res.status(409).json({
+              success: false,
+              message: `Username '${cleanUsername}' is already taken. Please choose another username.`,
+            });
+          }
+        }
+        finalUsername = cleanUsername;
+      }
+    }
+
+    const finalFullName = fullName && String(fullName).trim() ? String(fullName).trim() : user.full_name;
+    const finalPhone = phone !== undefined ? String(phone).trim() : user.phone;
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     if (db) {
       await db.query(
         `UPDATE users 
-         SET password_hash = ?, account_status = 'active', is_active = TRUE, invite_token_hash = NULL, invite_expires_at = NULL
+         SET username = ?, full_name = ?, phone = ?, password_hash = ?, account_status = 'active', is_active = TRUE, invite_token_hash = NULL, invite_expires_at = NULL
          WHERE id = ?`,
-        [passwordHash, user.id]
+        [finalUsername, finalFullName, finalPhone || null, passwordHash, user.id]
       );
+      user.username = finalUsername;
+      user.full_name = finalFullName;
+      user.phone = finalPhone;
     } else {
+      user.username = finalUsername;
+      user.full_name = finalFullName;
+      user.phone = finalPhone;
       user.password_hash = passwordHash;
       user.account_status = 'active';
       user.is_active = 1;

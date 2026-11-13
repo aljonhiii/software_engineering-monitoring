@@ -5,19 +5,23 @@ import dotenv from 'dotenv';
 /**
  * Detect primary physical IPv4 address for fallback LAN links.
  */
-function getPrimaryLanIp() {
+export function getPrimaryLanIp() {
   const interfaces = os.networkInterfaces();
   const candidates = [];
 
   for (const [name, addrs] of Object.entries(interfaces)) {
     if (!addrs) continue;
-    const isVirtual = /(virtual|vethernet|hyper-v|vbox|wsl|docker|loopback)/i.test(name);
+    const lower = name.toLowerCase();
+    const isVirtual = /(virtual|vethernet|hyper-v|vbox|wsl|docker|loopback)/i.test(lower);
     for (const addr of addrs) {
       if (addr.family === 'IPv4' && !addr.internal) {
-        if (!isVirtual && (addr.address.startsWith('192.168.') || addr.address.startsWith('10.'))) {
-          return addr.address;
+        // Exclude VirtualBox Host-Only (192.168.56.x) and link-local (169.254.x)
+        if (!addr.address.startsWith('192.168.56.') && !addr.address.startsWith('169.254.')) {
+          if (!isVirtual && (addr.address.startsWith('192.168.') || addr.address.startsWith('10.') || addr.address.startsWith('172.'))) {
+            return addr.address;
+          }
+          candidates.push({ ip: addr.address, isVirtual });
         }
-        candidates.push({ ip: addr.address, isVirtual });
       }
     }
   }
@@ -28,11 +32,30 @@ function getPrimaryLanIp() {
 
 /**
  * Get active frontend base URL for invitations.
+ * Automatically resolves to the physical LAN IP in development (or explicit production domain)
+ * so email links opened on mobile phones/tablets connect smoothly.
  */
-export function getFrontendBaseUrl() {
-  if (process.env.FRONTEND_URL && String(process.env.FRONTEND_URL).trim()) {
-    return String(process.env.FRONTEND_URL).trim().replace(/\/+$/, '');
+export function getFrontendBaseUrl(req = null) {
+  dotenv.config({ override: true });
+  const configured = process.env.FRONTEND_URL
+    ? String(process.env.FRONTEND_URL).trim().replace(/\/+$/, '')
+    : '';
+
+  // If explicitly configured with a public production domain (not localhost), use it
+  if (configured && !configured.includes('localhost') && !configured.includes('127.0.0.1')) {
+    return configured;
   }
+
+  // If request comes from an external host/IP, infer the host
+  if (req && typeof req.get === 'function') {
+    const hostHeader = req.get('host');
+    if (hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1')) {
+      const hostIp = hostHeader.split(':')[0];
+      return `http://${hostIp}:5173`;
+    }
+  }
+
+  // Auto-detect host computer's active Wi-Fi LAN IP
   const lanIp = getPrimaryLanIp();
   return `http://${lanIp}:5173`;
 }

@@ -6,15 +6,16 @@ import {
   hasValidCoordinates,
 } from '../config/db.js';
 import { hashInviteToken } from './authController.js';
-import { sendBuyerInvitationEmail, getFrontendBaseUrl } from '../services/emailService.js';
+import { sendBuyerInvitationEmail, getFrontendBaseUrl, getPrimaryLanIp } from '../services/emailService.js';
 
 const KIOSK_BASE_URL = process.env.KIOSK_BASE_URL || 'http://localhost:8081';
 
 function getDynamicLauncherUrl(kioskId) {
   const cleanId = String(kioskId || '').trim().toUpperCase();
+  const lanIp = getPrimaryLanIp();
   return cleanId
-    ? `http://localhost:3000/api/launcher/kiosk?kioskId=${encodeURIComponent(cleanId)}`
-    : 'http://localhost:3000/api/launcher/kiosk';
+    ? `http://${lanIp}:3000/api/launcher/kiosk?kioskId=${encodeURIComponent(cleanId)}`
+    : `http://${lanIp}:3000/api/launcher/kiosk`;
 }
 
 function parseCoordinate(val, min, max, label) {
@@ -831,7 +832,7 @@ export async function createAdminBuyer(req, res) {
     const updatedData = await fetchAllDataForAdmin();
     const createdBuyer = updatedData.users.find((u) => u.id === buyerId);
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
-    const frontendBase = getFrontendBaseUrl();
+    const frontendBase = getFrontendBaseUrl(req);
     const fullSetupUrl = `${frontendBase}${invitationPath}`;
 
     const launcherUrl = getDynamicLauncherUrl(
@@ -1047,7 +1048,7 @@ export async function generateBuyerInvite(req, res) {
     const refreshed = await fetchAllDataForAdmin();
     const updatedUser = refreshed.users.find((u) => u.id === id);
 
-    const frontendBase = getFrontendBaseUrl();
+    const frontendBase = getFrontendBaseUrl(req);
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
     const fullSetupUrl = `${frontendBase}${invitationPath}`;
 

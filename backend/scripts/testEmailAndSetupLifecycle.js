@@ -64,11 +64,12 @@ async function run() {
   const setupUrl = createRes.data.invitation.setupUrl;
 
   assert(setupUrl, 'Setup URL should be present in creation response');
+  assert(!setupUrl.includes('localhost') && !setupUrl.includes('127.0.0.1'), `Setup URL must use dynamic LAN IP for mobile, got: ${setupUrl}`);
   assert(createRes.data.emailResult, 'emailResult should be present in response');
   assert.strictEqual(createRes.data.buyer.setupStatus, 'not_done', 'Initial setupStatus must be not_done');
   assert.strictEqual(createRes.data.buyer.isSetupComplete, false, 'Initial isSetupComplete must be false');
   console.log(`✅ PASS: Buyer created with email ${testEmail}`);
-  console.log(`   Setup URL generated: ${setupUrl}`);
+  console.log(`✅ PASS: Setup URL dynamically uses LAN IP (Mobile-ready): ${setupUrl}`);
   console.log(`   Email dispatch mode: ${createRes.data.emailResult.mode} (sent: ${createRes.data.emailResult.sent})`);
 
   // Step 3: Fetch buyers list and verify initial status
@@ -86,16 +87,35 @@ async function run() {
   assert.strictEqual(verifyRes.data.invitation.email, testEmail);
   console.log('✅ PASS: Invitation token verified successfully');
 
-  // Step 5: Complete account setup by setting password
+  // Step 5: Complete account setup by customizing username, fullName, and setting password
+  const customUsername = `custom_user_${uniqueId}`;
+  const customFullName = `Customized Owner ${uniqueId}`;
+
   const completeRes = await request('/auth/complete-setup', {
     method: 'POST',
     body: JSON.stringify({
       token: rawInviteToken,
       password: 'StrongPassword123!',
+      username: customUsername,
+      fullName: customFullName,
     }),
   });
   assert.strictEqual(completeRes.status, 200, 'completeAccountSetup failed');
-  console.log('✅ PASS: Account setup completed (password set)');
+  assert.strictEqual(completeRes.data.user.username, customUsername, 'Username must be customized');
+  assert.strictEqual(completeRes.data.user.fullName, customFullName, 'Full name must be customized');
+  console.log(`✅ PASS: Account setup completed with custom username: @${customUsername}`);
+
+  // Step 5b: Verify user can log in with customized username
+  const customLoginRes = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      identifier: customUsername,
+      password: 'StrongPassword123!',
+    }),
+  });
+  assert.strictEqual(customLoginRes.status, 200, 'Login with custom username failed');
+  assert.strictEqual(customLoginRes.data.user.username, customUsername);
+  console.log(`✅ PASS: Login with customized username @${customUsername} succeeded`);
 
   // Step 6: Verify buyers list now shows setupStatus: "done"
   const listRes2 = await request('/admin/buyers', { headers: adminHeaders });
