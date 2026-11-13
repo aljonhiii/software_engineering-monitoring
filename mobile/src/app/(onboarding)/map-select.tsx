@@ -101,6 +101,7 @@ export default function MapSelectScreen() {
         locationName: selectedLocation.barangay
           ? `${finalAddress}, Brgy. ${selectedLocation.barangay}`
           : finalAddress,
+        method: isGpsMethod ? 'gps' : 'manual',
       },
     });
   };
@@ -130,8 +131,16 @@ export default function MapSelectScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Center Content: Dropdown, Map & Address Card */}
+        {/* Center Content: Instruction, Dropdown, Map & Address Card */}
         <View style={styles.mainContent}>
+          {/* Instruction Panel */}
+          <View style={styles.instructionPanel}>
+            <Text style={styles.instructionTitle}>Pinpoint your kiosk location</Text>
+            <Text style={styles.instructionBody}>
+              Move the marker to the exact spot where your kiosk will be placed. Zoom in for precision.
+            </Text>
+          </View>
+
           {/* Dropdown Selector for All 98 Barangays & Live Map Places */}
           <BarangayDropdownPicker
             selectedBarangay={selectedLocation.barangay || 'Canelar'}
@@ -244,6 +253,24 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     justifyContent: 'center',
+  },
+  instructionPanel: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  instructionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  instructionBody: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 16,
   },
   addressCard: {
     backgroundColor: '#FFFFFF',

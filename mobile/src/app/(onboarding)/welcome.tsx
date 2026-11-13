@@ -9,10 +9,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { KixCleenLogo } from '../../components/common/KixCleenLogo';
 import { Colors, Spacing } from '../../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const FEATURES = [
+  { icon: 'activity' as const, label: 'Real-time kiosk monitoring' },
+  { icon: 'map-pin' as const, label: 'Location management' },
+  { icon: 'bar-chart-2' as const, label: 'Revenue & usage tracking' },
+];
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -24,7 +31,7 @@ export default function WelcomeScreen() {
         {/* Top spacer */}
         <View style={styles.topSpacer} />
 
-        {/* Central Hero: KixCleen Logo (Replaces previous vector character) */}
+        {/* Central Hero: KixCleen Logo */}
         <View style={styles.logoHeroWrapper}>
           <View style={styles.logoSoftWash}>
             <KixCleenLogo width={210} height={110} />
@@ -35,8 +42,22 @@ export default function WelcomeScreen() {
         <View style={styles.textSection}>
           <Text style={styles.title}>Let&apos;s get started</Text>
           <Text style={styles.subtitle}>
-            Your smart shoe-cleaning experience starts here. Let&apos;s set up your kiosk location.
+            Your KixCleen journey starts here. Manage your kiosk, monitor its
+            activity, and keep your shoe-cleaning business connected wherever you
+            go.
           </Text>
+        </View>
+
+        {/* Feature Highlights */}
+        <View style={styles.featuresBlock}>
+          {FEATURES.map((f) => (
+            <View key={f.icon} style={styles.featureRow}>
+              <View style={styles.featureIcon}>
+                <Feather name={f.icon} size={15} color={Colors.indigo} />
+              </View>
+              <Text style={styles.featureLabel}>{f.label}</Text>
+            </View>
+          ))}
         </View>
 
         {/* 3 Minimal Carousel Dots (First Dot Active) */}
@@ -113,6 +134,30 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '400',
+  },
+  featuresBlock: {
+    alignItems: 'flex-start',
+    gap: 10,
+    maxWidth: 260,
+    alignSelf: 'center',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#1E293B',
   },
   dotsRow: {
     flexDirection: 'row',

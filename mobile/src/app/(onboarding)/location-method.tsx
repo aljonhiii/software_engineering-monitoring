@@ -111,7 +111,8 @@ export default function LocationMethodScreen() {
           <View style={styles.titleWrapper}>
             <Text style={styles.screenTitle}>Kiosk Location</Text>
             <Text style={styles.screenSubtitle}>
-              Where would you like to place your KixCleen kiosk?
+              Let&apos;s find your kiosk&apos;s home. Register the physical location so
+              you can monitor and manage where your KixCleen machine operates.
             </Text>
           </View>
           <View style={{ width: 36 }} />
@@ -154,7 +155,7 @@ export default function LocationMethodScreen() {
                   selectedMethod === 'gps' && styles.cardTitleActive,
                 ]}
               >
-                Use current location
+                I&apos;m at the location
               </Text>
               <Text
                 style={[
@@ -162,7 +163,10 @@ export default function LocationMethodScreen() {
                   selectedMethod === 'gps' && styles.cardSubtitleActive,
                 ]}
               >
-                Detect your physical GPS coordinates standing at the kiosk installation spot.
+                Already at your planned installation site? Let your device detect your current location.
+              </Text>
+              <Text style={styles.cardHelper}>
+                For the most accurate result, stand where your kiosk will be installed.
               </Text>
             </View>
             <View
@@ -203,7 +207,7 @@ export default function LocationMethodScreen() {
                   selectedMethod === 'manual' && styles.cardTitleActive,
                 ]}
               >
-                Select manually on map
+                I&apos;ll choose on the map
               </Text>
               <Text
                 style={[
@@ -211,7 +215,7 @@ export default function LocationMethodScreen() {
                   selectedMethod === 'manual' && styles.cardSubtitleActive,
                 ]}
               >
-                Browse Zamboanga City barangays and drag the pin to your exact kiosk setup point.
+                Not at the installation site yet? Search for your city and barangay, then pinpoint the exact location on the map.
               </Text>
             </View>
             <View
@@ -379,6 +383,12 @@ const styles = StyleSheet.create({
   cardSubtitleActive: {
     color: '#4338CA',
     fontWeight: '500',
+  },
+  cardHelper: {
+    fontSize: 11,
+    color: '#94A3B8',
+    lineHeight: 15,
+    marginTop: 4,
   },
   radioRing: {
     width: 20,

@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -13,7 +15,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { registerKioskLocationApi } from '../../api/machineApi';
 import { useAuth } from '../../context/AuthContext';
+import {
+  InteractiveKioskMap,
+} from '../../components/map/InteractiveKioskMap';
 import { Colors, Spacing } from '../../constants/theme';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ConfirmLocationScreen() {
   const router = useRouter();
@@ -25,6 +32,7 @@ export default function ConfirmLocationScreen() {
     barangay?: string;
     city?: string;
     locationName?: string;
+    method?: string;
   }>();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,6 +44,7 @@ export default function ConfirmLocationScreen() {
   const barangay = params.barangay || 'Canelar';
   const city = params.city || 'Zamboanga City';
   const locationName = params.locationName || `${address}, Brgy. ${barangay}`;
+  const method = params.method || 'manual';
   const assignedKioskId = user?.assignedKioskIds?.[0] || 'KIOSK-01-MAIN';
 
   const handleConfirmLocation = async () => {
@@ -80,11 +89,13 @@ export default function ConfirmLocationScreen() {
     }
   };
 
+  const mapPreviewHeight = SCREEN_HEIGHT > 780 ? 160 : 130;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        {/* Navigation Bar matching Steps 2 & 3 */}
+        {/* Navigation Bar */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -94,16 +105,21 @@ export default function ConfirmLocationScreen() {
             <Feather name="chevron-left" size={24} color="#1E293B" />
           </TouchableOpacity>
           <View style={styles.titleWrapper}>
-            <Text style={styles.screenTitle}>Review Location</Text>
+            <Text style={styles.screenTitle}>Your kiosk&apos;s location</Text>
             <Text style={styles.screenSubtitle}>
-              Please verify your kiosk installation details before saving.
+              Review your selected installation site. Make sure everything is correct before saving.
             </Text>
           </View>
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Center Content: Clean Review Card */}
-        <View style={styles.mainContent}>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           {errorMessage && (
             <View style={styles.errorBanner}>
               <Feather name="alert-circle" size={15} color={Colors.red} />
@@ -111,40 +127,78 @@ export default function ConfirmLocationScreen() {
             </View>
           )}
 
-          <View style={styles.reviewCard}>
-            <View style={styles.iconCircle}>
-              <Feather name="map-pin" size={22} color={Colors.indigo} />
+          {/* B. Map Preview Card */}
+          <View style={styles.mapPreviewCard}>
+            <View style={styles.mapClip}>
+              <InteractiveKioskMap
+                initialLatitude={latitude}
+                initialLongitude={longitude}
+                initialAddress={address}
+                initialBarangay={barangay}
+                onLocationSelect={() => {}}
+                height={mapPreviewHeight}
+                showQuickChips={false}
+                showDetailsCard={false}
+              />
+              {/* Touch-blocking overlay to prevent interaction */}
+              <View style={styles.mapOverlay} />
             </View>
-
-            <Text style={styles.addressTitle}>{address}</Text>
-            <Text style={styles.barangaySubtitle}>Brgy. {barangay}, {city}</Text>
-
-            <View style={styles.divider} />
-
-            <View style={styles.detailsList}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Coordinates</Text>
-                <Text style={styles.detailValue}>
-                  {latitude.toFixed(5)}, {longitude.toFixed(5)}
-                </Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Assigned Kiosk</Text>
-                <Text style={styles.detailValue}>{assignedKioskId}</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Owner</Text>
-                <Text style={styles.detailValue}>
-                  {user?.fullName || user?.username || 'Kiosk Owner'}
+            <View style={styles.mapPreviewInfo}>
+              <Feather name="map-pin" size={16} color={Colors.indigo} />
+              <View style={styles.mapPreviewText}>
+                <Text style={styles.mapPreviewAddress}>{address}</Text>
+                <Text style={styles.mapPreviewBarangay}>
+                  Brgy. {barangay}, {city}
                 </Text>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* Bottom Action Section */}
+          {/* C. Location Details Section */}
+          <View style={styles.detailsBox}>
+            <DetailRow
+              icon="navigation"
+              label="Method"
+              value={method === 'gps' ? 'GPS Detection' : 'Manual Selection'}
+            />
+            <DetailRow
+              icon="crosshair"
+              label="Latitude"
+              value={latitude.toFixed(5)}
+            />
+            <DetailRow
+              icon="crosshair"
+              label="Longitude"
+              value={longitude.toFixed(5)}
+            />
+            <DetailRow
+              icon="map-pin"
+              label="Address"
+              value={`${address}, Brgy. ${barangay}`}
+            />
+          </View>
+
+          {/* D. Info Box */}
+          <View style={styles.infoBox}>
+            <View style={styles.infoBoxHeader}>
+              <Feather name="info" size={14} color={Colors.indigo} />
+              <Text style={styles.infoBoxTitle}>Before you confirm</Text>
+            </View>
+            <Text style={styles.infoBoxBody}>
+              Make sure this pin marks the actual spot where your KixCleen kiosk will be installed. Your registered location will be used for kiosk monitoring and management.
+            </Text>
+          </View>
+
+          {/* E. Confirmation Section */}
+          <View style={styles.confirmSection}>
+            <Text style={styles.confirmTitle}>Everything look correct?</Text>
+            <Text style={styles.confirmSubtitle}>
+              Once confirmed, your kiosk location is saved to your owner account.
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Bottom Action Section (fixed) */}
         <View style={styles.bottomSection}>
           <TouchableOpacity
             style={styles.pillButton}
@@ -155,7 +209,7 @@ export default function ConfirmLocationScreen() {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.pillButtonText}>Confirm Kiosk Location</Text>
+              <Text style={styles.pillButtonText}>Confirm Location</Text>
             )}
           </TouchableOpacity>
 
@@ -168,13 +222,67 @@ export default function ConfirmLocationScreen() {
             <Text style={styles.secondaryButtonText}>Edit Location</Text>
           </TouchableOpacity>
 
-          {/* Clean Home Indicator Bar */}
           <View style={styles.homeIndicator} />
         </View>
       </View>
     </SafeAreaView>
   );
 }
+
+/* Reusable detail row component */
+function DetailRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={detailStyles.row}>
+      <View style={detailStyles.iconCircle}>
+        <Feather name={icon} size={13} color={Colors.indigo} />
+      </View>
+      <View style={detailStyles.textBlock}>
+        <Text style={detailStyles.label}>{label}</Text>
+        <Text style={detailStyles.value} numberOfLines={2}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const detailStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  iconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textBlock: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  value: {
+    fontSize: 13,
+    color: '#1E293B',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+});
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -185,13 +293,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: Spacing.xl,
-    justifyContent: 'space-between',
-    paddingTop: 24, // Matches Steps 2 & 3
+    paddingTop: 24,
     paddingBottom: Spacing.xs,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
     position: 'relative',
   },
   backButton: {
@@ -222,9 +329,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     maxWidth: 290,
   },
-  mainContent: {
+  scrollArea: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 16,
+    gap: 14,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -235,7 +345,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.25)',
     borderRadius: 10,
     padding: Spacing.sm,
-    marginBottom: 14,
   },
   errorBannerText: {
     flex: 1,
@@ -243,71 +352,114 @@ const styles = StyleSheet.create({
     color: Colors.red,
     lineHeight: 16,
   },
-  reviewCard: {
+
+  // B. Map Preview Card
+  mapPreviewCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    padding: 20,
-    alignItems: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(79, 70, 229, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+  mapClip: {
+    overflow: 'hidden',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'relative',
   },
-  addressTitle: {
-    fontSize: 16,
+  mapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  mapPreviewInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  mapPreviewText: {
+    flex: 1,
+  },
+  mapPreviewAddress: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#1E293B',
-    textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
-  barangaySubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 14,
-  },
-  divider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginBottom: 14,
-  },
-  detailsList: {
-    width: '100%',
-    gap: 10,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detailLabel: {
+  mapPreviewBarangay: {
     fontSize: 12,
     color: '#64748B',
-    fontWeight: '500',
   },
-  detailValue: {
+
+  // C. Details Box
+  detailsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+
+  // D. Info Box
+  infoBox: {
+    backgroundColor: 'rgba(79, 70, 229, 0.05)',
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.indigo,
+    padding: 12,
+  },
+  infoBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  infoBoxTitle: {
     fontSize: 13,
-    color: '#1E293B',
-    fontWeight: '600',
+    fontWeight: '700',
+    color: Colors.indigo,
   },
+  infoBoxBody: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
+  },
+
+  // E. Confirmation Section
+  confirmSection: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  confirmTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  confirmSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+
+  // Bottom
   bottomSection: {
     width: '100%',
     alignItems: 'center',
     gap: 10,
     paddingBottom: Spacing.xs,
+    paddingTop: 8,
   },
   pillButton: {
     width: '100%',
