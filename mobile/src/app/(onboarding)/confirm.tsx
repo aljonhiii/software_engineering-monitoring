@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -11,10 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { registerKioskLocationApi } from '../../api/machineApi';
 import { useAuth } from '../../context/AuthContext';
-import { Colors, BorderRadius, Spacing, Shadows } from '../../constants/theme';
+import { Colors, Spacing } from '../../constants/theme';
 
 export default function ConfirmLocationScreen() {
   const router = useRouter();
@@ -57,7 +56,6 @@ export default function ConfirmLocationScreen() {
       setIsSubmitting(false);
 
       if (res.success) {
-        // Mark onboarding completed in Auth state
         completeOnboarding(res.kiosk);
 
         Alert.alert(
@@ -85,106 +83,71 @@ export default function ConfirmLocationScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Navigation Bar */}
-        <View style={styles.navBar}>
+      <View style={styles.container}>
+        {/* Navigation Bar matching Steps 2 & 3 */}
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+            <Feather name="chevron-left" size={24} color="#1E293B" />
           </TouchableOpacity>
-          <Text style={styles.navTitle}>Review Location</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        {/* Hero Illustration Header */}
-        <View style={styles.headerHero}>
-          <View style={styles.kioskIconBadge}>
-            <MaterialCommunityIcons name="store-marker-outline" size={38} color={Colors.petrol} />
-          </View>
-          <Text style={styles.mainTitle}>Confirm Kiosk Location</Text>
-          <Text style={styles.subTitle}>
-            Review your physical kiosk setup details before finalizing your account.
-          </Text>
-        </View>
-
-        {errorMessage && (
-          <View style={styles.errorBox}>
-            <Feather name="alert-triangle" size={16} color={Colors.red} />
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          </View>
-        )}
-
-        {/* Summary Card */}
-        <View style={styles.reviewCard}>
-          <View style={styles.cardSection}>
-            <View style={styles.sectionHeader}>
-              <Feather name="map-pin" size={16} color={Colors.primary} />
-              <Text style={styles.sectionTitle}>Physical Address</Text>
-            </View>
-            <Text style={styles.addressDisplay}>{address}</Text>
-            <Text style={styles.subAddressDisplay}>
-              Brgy. {barangay}, {city}
+          <View style={styles.titleWrapper}>
+            <Text style={styles.screenTitle}>Review Location</Text>
+            <Text style={styles.screenSubtitle}>
+              Please verify your kiosk installation details before saving.
             </Text>
           </View>
+          <View style={{ width: 36 }} />
+        </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.cardSection}>
-            <View style={styles.sectionHeader}>
-              <Feather name="crosshair" size={16} color={Colors.accent} />
-              <Text style={styles.sectionTitle}>GPS Geo-Coordinates</Text>
+        {/* Center Content: Clean Review Card */}
+        <View style={styles.mainContent}>
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Feather name="alert-circle" size={15} color={Colors.red} />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
-            <View style={styles.coordBox}>
-              <View style={styles.coordItem}>
-                <Text style={styles.coordLabel}>Latitude</Text>
-                <Text style={styles.coordValue}>{latitude.toFixed(6)}</Text>
+          )}
+
+          <View style={styles.reviewCard}>
+            <View style={styles.iconCircle}>
+              <Feather name="map-pin" size={22} color={Colors.indigo} />
+            </View>
+
+            <Text style={styles.addressTitle}>{address}</Text>
+            <Text style={styles.barangaySubtitle}>Brgy. {barangay}, {city}</Text>
+
+            <View style={styles.divider} />
+
+            <View style={styles.detailsList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Coordinates</Text>
+                <Text style={styles.detailValue}>
+                  {latitude.toFixed(5)}, {longitude.toFixed(5)}
+                </Text>
               </View>
-              <View style={styles.coordDivider} />
-              <View style={styles.coordItem}>
-                <Text style={styles.coordLabel}>Longitude</Text>
-                <Text style={styles.coordValue}>{longitude.toFixed(6)}</Text>
-              </View>
-            </View>
-          </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.cardSection}>
-            <View style={styles.sectionHeader}>
-              <Feather name="cpu" size={16} color="#8B5CF6" />
-              <Text style={styles.sectionTitle}>Hardware Association</Text>
-            </View>
-            <View style={styles.hardwareRow}>
-              <Text style={styles.hardwareLabel}>Assigned Machine:</Text>
-              <View style={styles.hardwarePill}>
-                <Text style={styles.hardwarePillText}>{assignedKioskId}</Text>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Assigned Kiosk</Text>
+                <Text style={styles.detailValue}>{assignedKioskId}</Text>
               </View>
-            </View>
-            <View style={styles.hardwareRow}>
-              <Text style={styles.hardwareLabel}>Registered Owner:</Text>
-              <Text style={styles.hardwareValue}>{user?.fullName || user?.username || 'Owner'}</Text>
+
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Owner</Text>
+                <Text style={styles.detailValue}>
+                  {user?.fullName || user?.username || 'Kiosk Owner'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Confirmation Guarantee Badge */}
-        <View style={styles.guaranteeBadge}>
-          <Feather name="check-circle" size={15} color={Colors.accent} />
-          <Text style={styles.guaranteeText}>
-            This location will be saved permanently and used for customer navigation and telemetry.
-          </Text>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionContainer}>
+        {/* Bottom Action Section */}
+        <View style={styles.bottomSection}>
           <TouchableOpacity
-            style={styles.confirmButton}
+            style={styles.pillButton}
             onPress={handleConfirmLocation}
             disabled={isSubmitting}
             activeOpacity={0.85}
@@ -192,24 +155,23 @@ export default function ConfirmLocationScreen() {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <>
-                <Feather name="check" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.confirmButtonText}>CONFIRM KIOSK LOCATION</Text>
-              </>
+              <Text style={styles.pillButtonText}>Confirm Kiosk Location</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.editButton}
+            style={styles.secondaryButton}
             onPress={() => router.back()}
             disabled={isSubmitting}
             activeOpacity={0.7}
           >
-            <Feather name="edit-2" size={16} color={Colors.petrol} style={{ marginRight: 6 }} />
-            <Text style={styles.editButtonText}>EDIT LOCATION</Text>
+            <Text style={styles.secondaryButtonText}>Edit Location</Text>
           </TouchableOpacity>
+
+          {/* Clean Home Indicator Bar */}
+          <View style={styles.homeIndicator} />
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -217,196 +179,141 @@ export default function ConfirmLocationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    paddingTop: 24, // Matches Steps 2 & 3
+    paddingBottom: Spacing.xs,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 16,
+    position: 'relative',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    position: 'absolute',
+    left: 0,
+    top: 2,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
-  navTitle: {
-    fontSize: 16,
+  titleWrapper: {
+    alignItems: 'center',
+    paddingHorizontal: 36,
+  },
+  screenTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: Colors.petrol,
-  },
-  headerHero: {
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  kioskIconBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(16, 57, 79, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.sm,
-  },
-  mainTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.petrol,
-    marginBottom: Spacing.xs,
+    color: '#1E293B',
+    marginBottom: 4,
     textAlign: 'center',
   },
-  subTitle: {
+  screenSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 18,
-    paddingHorizontal: Spacing.md,
+    maxWidth: 290,
   },
-  errorBox: {
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: BorderRadius.md,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderRadius: 10,
     padding: Spacing.sm,
-    marginBottom: Spacing.md,
+    marginBottom: 14,
   },
-  errorText: {
+  errorBannerText: {
     flex: 1,
     fontSize: 12,
     color: Colors.red,
+    lineHeight: 16,
   },
   reviewCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-    ...Shadows.small,
-  },
-  cardSection: {
-    paddingVertical: 4,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 20,
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  addressDisplay: {
+  addressTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#1E293B',
+    textAlign: 'center',
     marginBottom: 2,
   },
-  subAddressDisplay: {
+  barangaySubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 14,
   },
   divider: {
+    width: '100%',
     height: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: Spacing.md,
+    backgroundColor: '#F1F5F9',
+    marginBottom: 14,
   },
-  coordBox: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.sm,
+  detailsList: {
+    width: '100%',
+    gap: 10,
   },
-  coordItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  coordDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-  coordLabel: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  coordValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.petrol,
-    fontFamily: 'monospace',
-  },
-  hardwareRow: {
+  detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 6,
   },
-  hardwareLabel: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  hardwarePill: {
-    backgroundColor: 'rgba(16, 57, 79, 0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  hardwarePillText: {
+  detailLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: Colors.petrol,
-    fontFamily: 'monospace',
+    color: '#64748B',
+    fontWeight: '500',
   },
-  hardwareValue: {
+  detailValue: {
     fontSize: 13,
+    color: '#1E293B',
     fontWeight: '600',
-    color: Colors.textPrimary,
   },
-  guaranteeBadge: {
-    flexDirection: 'row',
+  bottomSection: {
+    width: '100%',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0, 210, 180, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 210, 180, 0.3)',
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    marginBottom: Spacing.lg,
+    gap: 10,
+    paddingBottom: Spacing.xs,
   },
-  guaranteeText: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.petrol,
-    lineHeight: 16,
-  },
-  actionContainer: {
-    gap: Spacing.sm,
-  },
-  confirmButton: {
+  pillButton: {
+    width: '100%',
     height: 52,
     borderRadius: 26,
     backgroundColor: Colors.indigo,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.indigo,
@@ -415,25 +322,29 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  confirmButtonText: {
+  pillButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
   },
-  editButton: {
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    flexDirection: 'row',
+  secondaryButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editButtonText: {
-    color: Colors.petrol,
-    fontSize: 13,
-    fontWeight: '700',
+  secondaryButtonText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  homeIndicator: {
+    width: 134,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    marginTop: 8,
   },
 });

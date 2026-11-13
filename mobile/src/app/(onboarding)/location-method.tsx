@@ -99,7 +99,7 @@ export default function LocationMethodScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
       <View style={styles.container}>
-        {/* Top Header with Safe Area Spacing */}
+        {/* Top Header with Safe Area Spacing - Lowered a bit */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -117,7 +117,7 @@ export default function LocationMethodScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Options List */}
+        {/* Options List - Placed close to top title */}
         <View style={styles.cardsContainer}>
           {gpsError && (
             <View style={styles.errorBanner}>
@@ -144,12 +144,24 @@ export default function LocationMethodScreen() {
               <Feather
                 name="navigation"
                 size={20}
-                color={selectedMethod === 'gps' ? Colors.indigo : '#64748B'}
+                color={selectedMethod === 'gps' ? '#FFFFFF' : '#64748B'}
               />
             </View>
             <View style={styles.cardTextContent}>
-              <Text style={styles.cardTitle}>Use current location</Text>
-              <Text style={styles.cardSubtitle}>
+              <Text
+                style={[
+                  styles.cardTitle,
+                  selectedMethod === 'gps' && styles.cardTitleActive,
+                ]}
+              >
+                Use current location
+              </Text>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  selectedMethod === 'gps' && styles.cardSubtitleActive,
+                ]}
+              >
                 Detect your physical GPS coordinates standing at the kiosk installation spot.
               </Text>
             </View>
@@ -181,12 +193,24 @@ export default function LocationMethodScreen() {
               <MaterialCommunityIcons
                 name="map-marker-radius-outline"
                 size={22}
-                color={selectedMethod === 'manual' ? Colors.indigo : '#64748B'}
+                color={selectedMethod === 'manual' ? '#FFFFFF' : '#64748B'}
               />
             </View>
             <View style={styles.cardTextContent}>
-              <Text style={styles.cardTitle}>Select manually on map</Text>
-              <Text style={styles.cardSubtitle}>
+              <Text
+                style={[
+                  styles.cardTitle,
+                  selectedMethod === 'manual' && styles.cardTitleActive,
+                ]}
+              >
+                Select manually on map
+              </Text>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  selectedMethod === 'manual' && styles.cardSubtitleActive,
+                ]}
+              >
                 Browse Zamboanga City barangays and drag the pin to your exact kiosk setup point.
               </Text>
             </View>
@@ -242,19 +266,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: Spacing.xl,
     justifyContent: 'space-between',
-    paddingTop: Spacing.sm,
+    paddingTop: 24, // Lowered a bit from top
     paddingBottom: Spacing.xs,
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: 16,
     position: 'relative',
-    paddingTop: Spacing.xs,
   },
   backButton: {
     position: 'absolute',
     left: 0,
-    top: Spacing.xs,
+    top: 2,
     width: 36,
     height: 36,
     alignItems: 'center',
@@ -282,7 +305,7 @@ const styles = StyleSheet.create({
   cardsContainer: {
     gap: 14,
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: 16, // Places options close to header
   },
   errorBanner: {
     flexDirection: 'row',
@@ -317,10 +340,13 @@ const styles = StyleSheet.create({
   },
   methodCardActive: {
     borderColor: Colors.indigo,
-    backgroundColor: 'rgba(79, 70, 229, 0.03)',
+    borderWidth: 2,
+    backgroundColor: 'rgba(79, 70, 229, 0.05)',
     shadowColor: Colors.indigo,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
   },
   iconWash: {
     width: 44,
@@ -331,7 +357,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWashActive: {
-    backgroundColor: 'rgba(79, 70, 229, 0.12)',
+    backgroundColor: Colors.indigo,
   },
   cardTextContent: {
     flex: 1,
@@ -342,10 +368,17 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 2,
   },
+  cardTitleActive: {
+    color: Colors.indigo,
+  },
   cardSubtitle: {
     fontSize: 12,
     color: '#64748B',
     lineHeight: 16,
+  },
+  cardSubtitleActive: {
+    color: '#4338CA',
+    fontWeight: '500',
   },
   radioRing: {
     width: 20,
@@ -358,6 +391,7 @@ const styles = StyleSheet.create({
   },
   radioRingActive: {
     borderColor: Colors.indigo,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
   },
   radioDot: {
     width: 10,

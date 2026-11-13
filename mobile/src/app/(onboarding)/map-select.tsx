@@ -205,19 +205,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: Spacing.xl,
     justifyContent: 'space-between',
-    paddingTop: Spacing.sm,
+    paddingTop: 24, // Lowered a bit to match Step 2
     paddingBottom: Spacing.xs,
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: 14,
     position: 'relative',
-    paddingTop: Spacing.xs,
   },
   backButton: {
     position: 'absolute',
     left: 0,
-    top: Spacing.xs,
+    top: 2,
     width: 36,
     height: 36,
     alignItems: 'center',
