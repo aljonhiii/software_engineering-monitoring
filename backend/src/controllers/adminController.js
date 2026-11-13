@@ -41,7 +41,16 @@ async function fetchAllDataForAdmin() {
     const [kiosks] = await db.query('SELECT * FROM kiosks ORDER BY created_at ASC');
     const [owners] = await db.query('SELECT * FROM kiosk_owners ORDER BY assigned_at DESC');
     const [machineStatuses] = await db.query('SELECT * FROM machine_status');
-    return { db, users, kiosks, owners, machineStatuses };
+    const [transactions] = await db.query('SELECT * FROM transactions ORDER BY created_at DESC LIMIT 50');
+    return {
+      db,
+      users,
+      kiosks,
+      owners,
+      machineStatuses,
+      transactions: transactions || [],
+      inquiries: memoryStore.inquiries || [],
+    };
   } else {
     saveMemoryStore();
     return {
@@ -50,6 +59,8 @@ async function fetchAllDataForAdmin() {
       kiosks: memoryStore.kiosks,
       owners: memoryStore.kiosk_owners,
       machineStatuses: memoryStore.machine_status,
+      transactions: memoryStore.transactions || [],
+      inquiries: memoryStore.inquiries || [],
     };
   }
 }
@@ -146,7 +157,7 @@ function formatAdminBuyer(u, owners, kiosks) {
  */
 export async function getAdminOverview(req, res) {
   try {
-    const { users, kiosks, owners, machineStatuses } = await fetchAllDataForAdmin();
+    const { users, kiosks, owners, machineStatuses, transactions, inquiries } = await fetchAllDataForAdmin();
 
     const formattedKiosks = kiosks.map((k) =>
       formatAdminKiosk(k, owners, users, machineStatuses)
@@ -171,6 +182,49 @@ export async function getAdminOverview(req, res) {
     const invitedBuyers = buyers.filter((b) => b.accountStatus === 'invited').length;
     const deactivatedBuyers = buyers.filter((b) => !b.isActive || b.accountStatus === 'deactivated').length;
 
+    // Advanced Telemetry Statistics
+    const completedTx = (transactions || []).filter(
+      (t) => t.payment_status === 'paid' || t.cleaning_status === 'completed'
+    );
+    const totalRevenue = completedTx.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
+    const totalOrders = completedTx.length;
+
+    const serviceDistribution = {
+      sanitation: completedTx.filter((t) => String(t.service_tier || t.service_name).toLowerCase().includes('sanit')).length,
+      deodorize: completedTx.filter((t) => String(t.service_tier || t.service_name).toLowerCase().includes('deod')).length,
+      disinfection: completedTx.filter((t) => String(t.service_tier || t.service_name).toLowerCase().includes('disinf')).length,
+    };
+
+    const leatherCount = completedTx.filter((t) => String(t.shoe_type).toLowerCase().includes('leather')).length;
+    const sneakersCount = completedTx.length - leatherCount;
+    const categoryDistribution = {
+      leather: leatherCount,
+      sneakers: Math.max(0, sneakersCount),
+    };
+
+    const validWater = formattedKiosks.map((k) => k.waterLevelPercent).filter(Number.isFinite);
+    const avgWater = validWater.length ? Math.round(validWater.reduce((a, b) => a + b, 0) / validWater.length) : 88;
+    const validSoap = formattedKiosks.map((k) => k.soapLevelPercent).filter(Number.isFinite);
+    const avgSoap = validSoap.length ? Math.round(validSoap.reduce((a, b) => a + b, 0) / validSoap.length) : 92;
+
+    const uptimePct = formattedKiosks.length > 0
+      ? Math.round(((statusBreakdown.online + statusBreakdown.busy) / formattedKiosks.length) * 100)
+      : 95;
+
+    const recentActivity = (transactions || []).slice(0, 8).map((t) => ({
+      id: t.id,
+      orderId: t.order_id,
+      kioskId: t.kiosk_id,
+      serviceName: t.service_name || 'Sanitation',
+      shoeType: t.shoe_type || 'Other Shoes',
+      amount: Number(t.total_amount || 0),
+      paymentMethod: t.payment_method || 'coins',
+      status: t.cleaning_status || 'completed',
+      timestamp: t.created_at || t.started_at,
+    }));
+
+    const pendingInquiriesCount = (inquiries || []).filter((i) => i.status === 'pending').length;
+
     res.json({
       success: true,
       overview: {
@@ -186,6 +240,19 @@ export async function getAdminOverview(req, res) {
         deactivatedBuyers,
         kiosks: formattedKiosks,
         recentBuyers: buyers.slice(0, 5),
+        // Live fleet statistics
+        fleetCity: 'Zamboanga City',
+        totalRevenue,
+        totalOrders,
+        uptimePct,
+        serviceDistribution,
+        categoryDistribution,
+        fleetConsumables: {
+          waterPercent: avgWater,
+          soapPercent: avgSoap,
+        },
+        recentActivity,
+        pendingInquiriesCount,
       },
     });
   } catch (err) {
@@ -268,7 +335,7 @@ export async function createAdminKiosk(req, res) {
     const kioskId = (id && String(id).trim().toUpperCase()) || `KIOSK-${Date.now().toString().slice(-5)}`;
     const cleanName = String(name).trim();
     const cleanAddress = String(address || location).trim();
-    const cleanCity = String(city || 'Metro Manila').trim();
+    const cleanCity = String(city || 'Zamboanga City').trim();
     const cleanLocation = String(location || address).trim();
     const validStatuses = ['online', 'offline', 'busy', 'error', 'maintenance'];
     const cleanStatus = validStatuses.includes(status) ? status : 'online';
@@ -672,7 +739,7 @@ export async function createAdminBuyer(req, res) {
       const targetKioskName =
         (dedicatedKioskName && String(dedicatedKioskName).trim()) ||
         `KixCleen Vendo — ${String(fullName).trim()} Branch`;
-      const targetCity = (dedicatedKioskCity && String(dedicatedKioskCity).trim()) || 'Metro Manila';
+      const targetCity = (dedicatedKioskCity && String(dedicatedKioskCity).trim()) || 'Zamboanga City';
       const targetAddress =
         (dedicatedKioskAddress && String(dedicatedKioskAddress).trim()) || 'Main Commercial Station';
 
@@ -1311,6 +1378,86 @@ export async function removeKioskAssignment(req, res) {
     });
   } catch (err) {
     console.error('[Admin] Error removing assignment:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+// ============================================================================
+// Customer Inquiries & Order Requests
+// ============================================================================
+export async function getInquiries(req, res) {
+  try {
+    const list = Array.isArray(memoryStore.inquiries) ? memoryStore.inquiries : [];
+    res.json({
+      success: true,
+      count: list.length,
+      inquiries: list,
+    });
+  } catch (err) {
+    console.error('[Admin] Error fetching inquiries:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function updateInquiryStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const { status, adminNotes } = req.body;
+
+    const validStatuses = ['pending', 'contacted', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Valid values: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    if (!Array.isArray(memoryStore.inquiries)) {
+      memoryStore.inquiries = [];
+    }
+
+    const item = memoryStore.inquiries.find((i) => i.id === id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+    }
+
+    item.status = status;
+    if (adminNotes !== undefined) item.adminNotes = adminNotes;
+    item.updatedAt = new Date().toISOString();
+    saveMemoryStore();
+
+    res.json({
+      success: true,
+      message: `Inquiry status updated to ${status}.`,
+      inquiry: item,
+    });
+  } catch (err) {
+    console.error('[Admin] Error updating inquiry:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function deleteInquiry(req, res) {
+  try {
+    const { id } = req.params;
+    if (!Array.isArray(memoryStore.inquiries)) {
+      memoryStore.inquiries = [];
+    }
+
+    const idx = memoryStore.inquiries.findIndex((i) => i.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, message: 'Inquiry not found.' });
+    }
+
+    memoryStore.inquiries.splice(idx, 1);
+    saveMemoryStore();
+
+    res.json({
+      success: true,
+      message: 'Inquiry deleted successfully.',
+    });
+  } catch (err) {
+    console.error('[Admin] Error deleting inquiry:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }

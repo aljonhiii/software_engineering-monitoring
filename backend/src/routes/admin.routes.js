@@ -14,6 +14,9 @@ import {
   getAdminAssignments,
   assignKiosksToBuyer,
   removeKioskAssignment,
+  getInquiries,
+  updateInquiryStatus,
+  deleteInquiry,
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -41,5 +44,10 @@ router.post('/buyers/:id/invite', generateBuyerInvite);
 router.get('/assignments', getAdminAssignments);
 router.post('/assignments', assignKiosksToBuyer);
 router.delete('/assignments/:kioskId', removeKioskAssignment);
+
+// Customer Orders & Inquiries Management
+router.get('/inquiries', getInquiries);
+router.patch('/inquiries/:id', updateInquiryStatus);
+router.delete('/inquiries/:id', deleteInquiry);
 
 export default router;

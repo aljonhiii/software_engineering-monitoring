@@ -1,6 +1,7 @@
 import {
   getDbConnection,
   memoryStore,
+  saveMemoryStore,
   hasValidCoordinates,
 } from '../config/db.js';
 
@@ -24,7 +25,7 @@ function sanitizePublicKiosk(k) {
     id: k.id,
     name: k.name,
     address: k.address || k.location || '',
-    city: k.city || 'Metro Manila',
+    city: k.city || 'Zamboanga City',
     location: k.location || '',
     latitude: lat,
     longitude: lng,
@@ -138,5 +139,67 @@ export async function getPublicKioskById(req, res) {
   } catch (err) {
     console.error('[Public] Error fetching public kiosk detail:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+/**
+ * Handles incoming customer orders and franchise / kiosk inquiries from the public landing page.
+ */
+export async function createInquiry(req, res) {
+  try {
+    const {
+      fullName,
+      email,
+      phone,
+      preferredLocation,
+      inquiryType,
+      estimatedPairs,
+      message,
+    } = req.body;
+
+    if (!fullName || !fullName.trim()) {
+      return res.status(400).json({ success: false, message: 'Your full name is required.' });
+    }
+    if (!email || !email.trim() || !email.includes('@')) {
+      return res.status(400).json({ success: false, message: 'A valid email address is required.' });
+    }
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({ success: false, message: 'A contact phone number is required.' });
+    }
+
+    const cleanLocation = String(preferredLocation || 'Zamboanga City').trim();
+    const cleanType = String(inquiryType || 'Order Shoe Cleaning Service').trim();
+    const cleanMessage = String(message || '').trim();
+    const cleanPairs = String(estimatedPairs || '1-2 pairs').trim();
+
+    const inquiryId = `INQ-ZAM-${Date.now().toString().slice(-4)}`;
+    const newInquiry = {
+      id: inquiryId,
+      fullName: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      preferredLocation: cleanLocation,
+      inquiryType: cleanType,
+      estimatedPairs: cleanPairs,
+      message: cleanMessage,
+      status: 'pending', // 'pending' | 'contacted' | 'completed' | 'cancelled'
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!Array.isArray(memoryStore.inquiries)) {
+      memoryStore.inquiries = [];
+    }
+    memoryStore.inquiries.unshift(newInquiry);
+    saveMemoryStore();
+
+    res.status(201).json({
+      success: true,
+      message: 'Thank you! Your order request has been submitted. Our Zamboanga operations team will contact you shortly.',
+      inquiry: newInquiry,
+    });
+  } catch (err) {
+    console.error('[Public] Error submitting inquiry:', err);
+    res.status(500).json({ success: false, message: 'Could not submit your request. Please try again.' });
   }
 }

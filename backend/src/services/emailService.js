@@ -112,7 +112,7 @@ function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, exp
   const safeUsername = escapeHtml(username);
   const safeKioskId = dedicatedKiosk ? escapeHtml(dedicatedKiosk.id) : '';
   const safeKioskName = dedicatedKiosk ? escapeHtml(dedicatedKiosk.name || 'Dedicated KixCleen Machine') : '';
-  const safeKioskCity = dedicatedKiosk ? escapeHtml(dedicatedKiosk.city || 'Metro Manila') : '';
+  const safeKioskCity = dedicatedKiosk ? escapeHtml(dedicatedKiosk.city || 'Zamboanga City') : '';
 
   const kioskSnippet = dedicatedKiosk
     ? `
