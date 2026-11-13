@@ -15,8 +15,14 @@ import { Feather } from '@expo/vector-icons';
 import {
   InteractiveKioskMap,
   LocationCoordinate,
-  POPULAR_AREAS,
 } from '../../components/map/InteractiveKioskMap';
+import {
+  BarangayDropdownPicker,
+  SelectedPlace,
+} from '../../components/map/BarangayDropdownPicker';
+import {
+  findNearestBarangay,
+} from '../../constants/zamboangaBarangays';
 import { Colors, Spacing } from '../../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -33,16 +39,14 @@ export default function MapSelectScreen() {
   const initLng = params.initialLng ? parseFloat(params.initialLng) : 122.0790;
   const isGpsMethod = params.method === 'gps';
 
-  // Find if init coords match any known area
-  const matchedArea = POPULAR_AREAS.find(
-    (a) => Math.abs(a.lat - initLat) < 0.003 && Math.abs(a.lng - initLng) < 0.003
-  );
+  // Identify nearest official barangay from our 98 catalog
+  const nearestBarangay = findNearestBarangay(initLat, initLng);
 
   const initialAddress = isGpsMethod
     ? 'Detected Current Position'
-    : (matchedArea?.address || 'Gov. Camins Ave (Near KCC Mall)');
+    : (nearestBarangay.landmark || `Brgy. ${nearestBarangay.name}`);
 
-  const initialBarangay = matchedArea?.brgy || 'Canelar';
+  const initialBarangay = nearestBarangay.name;
 
   const [selectedLocation, setSelectedLocation] = useState<LocationCoordinate>({
     latitude: initLat,
@@ -60,6 +64,19 @@ export default function MapSelectScreen() {
     if (coord.address) {
       setAddressInput(coord.address);
     }
+  };
+
+  const handleDropdownSelect = (place: SelectedPlace) => {
+    const updatedAddress = place.address || (place.barangay ? `Brgy. ${place.barangay}` : 'Zamboanga City');
+    setSelectedLocation({
+      latitude: place.lat,
+      longitude: place.lng,
+      address: updatedAddress,
+      barangay: place.barangay,
+      city: 'Zamboanga City',
+      locationName: `${updatedAddress}, Brgy. ${place.barangay}`,
+    });
+    setAddressInput(updatedAddress);
   };
 
   const handleProceed = () => {
@@ -89,7 +106,7 @@ export default function MapSelectScreen() {
   };
 
   // Dynamic map height so all elements fit cleanly without scrolling
-  const mapHeight = SCREEN_HEIGHT > 780 ? 330 : SCREEN_HEIGHT > 680 ? 280 : 230;
+  const mapHeight = SCREEN_HEIGHT > 780 ? 300 : SCREEN_HEIGHT > 680 ? 250 : 200;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -113,17 +130,24 @@ export default function MapSelectScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Center Content: Map & Address Card */}
+        {/* Center Content: Dropdown, Map & Address Card */}
         <View style={styles.mainContent}>
-          {/* Interactive Map with Quick Chips */}
+          {/* Dropdown Selector for All 98 Barangays & Live Map Places */}
+          <BarangayDropdownPicker
+            selectedBarangay={selectedLocation.barangay || 'Canelar'}
+            selectedAddress={addressInput}
+            onSelect={handleDropdownSelect}
+          />
+
+          {/* Interactive Map */}
           <InteractiveKioskMap
-            initialLatitude={initLat}
-            initialLongitude={initLng}
-            initialAddress={initialAddress}
-            initialBarangay={initialBarangay}
+            initialLatitude={selectedLocation.latitude}
+            initialLongitude={selectedLocation.longitude}
+            initialAddress={selectedLocation.address}
+            initialBarangay={selectedLocation.barangay}
             onLocationSelect={handleLocationChange}
             height={mapHeight}
-            showQuickChips={true}
+            showQuickChips={false}
             showDetailsCard={false}
           />
 
@@ -186,7 +210,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
     position: 'relative',
     paddingTop: Spacing.xs,
   },
@@ -228,8 +252,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    marginTop: 12,
+    paddingVertical: 9,
+    marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,

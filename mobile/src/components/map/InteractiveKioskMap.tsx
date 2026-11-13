@@ -281,6 +281,27 @@ export function InteractiveKioskMap({
     [address, barangay, onLocationSelect]
   );
 
+  // Update map center and pin if parent supplies new coordinates (e.g. from dropdown)
+  useEffect(() => {
+    if (
+      Math.abs(initialLatitude - coords.latitude) > 0.0001 ||
+      Math.abs(initialLongitude - coords.longitude) > 0.0001
+    ) {
+      setCoords({ latitude: initialLatitude, longitude: initialLongitude });
+      if (initialBarangay) setBarangay(initialBarangay);
+      if (initialAddress) setAddress(initialAddress);
+
+      const msg = JSON.stringify({ action: 'SET_CENTER', latitude: initialLatitude, longitude: initialLongitude });
+      if (Platform.OS === 'web' && webIframeRef.current) {
+        try {
+          webIframeRef.current.contentWindow?.postMessage(msg, '*');
+        } catch {}
+      } else if (nativeWebviewRef.current) {
+        nativeWebviewRef.current.postMessage(msg);
+      }
+    }
+  }, [initialLatitude, initialLongitude, initialBarangay, initialAddress, coords.latitude, coords.longitude]);
+
   // Reverse geocode via Nominatim when coordinates change through manual dragging
   const resolveAddressFromCoords = useCallback(
     async (lat: number, lng: number) => {
