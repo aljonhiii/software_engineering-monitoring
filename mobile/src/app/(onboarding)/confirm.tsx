@@ -178,22 +178,11 @@ export default function ConfirmLocationScreen() {
             />
           </View>
 
-          {/* D. Info Box */}
-          <View style={styles.infoBox}>
-            <View style={styles.infoBoxHeader}>
-              <Feather name="info" size={14} color={Colors.indigo} />
-              <Text style={styles.infoBoxTitle}>Before you confirm</Text>
-            </View>
-            <Text style={styles.infoBoxBody}>
-              Make sure this pin marks the actual spot where your KixCleen kiosk will be installed. Your registered location will be used for kiosk monitoring and management.
-            </Text>
-          </View>
-
-          {/* E. Confirmation Section */}
-          <View style={styles.confirmSection}>
-            <Text style={styles.confirmTitle}>Everything look correct?</Text>
-            <Text style={styles.confirmSubtitle}>
-              Once confirmed, your kiosk location is saved to your owner account.
+          {/* D. Clean Verification Note */}
+          <View style={styles.noteCard}>
+            <Text style={styles.noteTitle}>Before you confirm</Text>
+            <Text style={styles.noteBody}>
+              Ensure the pin accurately marks your physical installation spot. You can update your kiosk location anytime from your owner settings.
             </Text>
           </View>
         </ScrollView>
@@ -410,47 +399,24 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // D. Info Box
-  infoBox: {
-    backgroundColor: 'rgba(79, 70, 229, 0.05)',
+  // D. Clean Note Card (replaces AI slop callout box)
+  noteCard: {
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.indigo,
-    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
   },
-  infoBoxHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  infoBoxTitle: {
+  noteTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.indigo,
-  },
-  infoBoxBody: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 17,
-  },
-
-  // E. Confirmation Section
-  confirmSection: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  confirmTitle: {
-    fontSize: 15,
-    fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  confirmSubtitle: {
+  noteBody: {
     fontSize: 12,
     color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 18,
   },
 
   // Bottom
