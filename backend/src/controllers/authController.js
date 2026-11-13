@@ -10,6 +10,7 @@ import {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kixcleen_super_secret_jwt_key_2026_monitor';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const KIOSK_BASE_URL = process.env.KIOSK_BASE_URL || 'http://localhost:8081';
 
 export function hashInviteToken(rawToken) {
   return crypto.createHash('sha256').update(String(rawToken)).digest('hex');
@@ -249,7 +250,7 @@ async function resolveAssignedKiosksList(kioskIds) {
     );
     return rows.map((k) => ({
       ...k,
-      launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
+      launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
     }));
   } else {
     return memoryStore.kiosks
@@ -261,7 +262,7 @@ async function resolveAssignedKiosksList(kioskIds) {
         address: k.address,
         location: k.location,
         status: k.status,
-        launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
+        launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
       }));
   }
 }

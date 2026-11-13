@@ -67,8 +67,9 @@ async function run() {
   const { buyer, invitation, dedicatedKiosk } = createBuyerRes.data;
   assert(dedicatedKiosk && dedicatedKiosk.id, `Dedicated kiosk provisioned with ID: ${dedicatedKiosk?.id}`);
   assert(
-    dedicatedKiosk.launcherUrl.includes(`?kioskId=${encodeURIComponent(dedicatedKiosk.id)}`),
-    `Dedicated kiosk launcher URL generated: ${dedicatedKiosk.launcherUrl}`
+    dedicatedKiosk.launcherUrl.startsWith('http://localhost:8081') &&
+      dedicatedKiosk.launcherUrl.includes(`?kioskId=${encodeURIComponent(dedicatedKiosk.id)}`),
+    `Dedicated kiosk launcher URL points to Shoeclean on port 8081: ${dedicatedKiosk.launcherUrl}`
   );
   assert(invitation && invitation.token, 'Account setup invitation token generated');
 

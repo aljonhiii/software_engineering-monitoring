@@ -7,6 +7,8 @@ import {
 } from '../config/db.js';
 import { hashInviteToken } from './authController.js';
 
+const KIOSK_BASE_URL = process.env.KIOSK_BASE_URL || 'http://localhost:8081';
+
 function parseCoordinate(val, min, max, label) {
   if (val === null || val === undefined || val === '') {
     return { value: null, error: null };
@@ -103,7 +105,7 @@ function formatAdminBuyer(u, owners, kiosks) {
         status: k.status || 'offline',
         isActive: Boolean(k.is_active ?? 1),
         assignedAt: o.assigned_at,
-        launcherUrl: `http://localhost:8082/?kioskId=${k.id}`,
+        launcherUrl: `${KIOSK_BASE_URL}/?kioskId=${k.id}`,
       };
     })
     .filter(Boolean);
@@ -821,10 +823,10 @@ export async function createAdminBuyer(req, res) {
     const invitationPath = `/setup-account?token=${rawInviteToken}`;
 
     const launcherUrl = provisionedKiosk
-      ? `http://localhost:8082/?kioskId=${provisionedKiosk.id}`
+      ? `${KIOSK_BASE_URL}/?kioskId=${provisionedKiosk.id}`
       : requestedKioskIds[0]
-      ? `http://localhost:8082/?kioskId=${requestedKioskIds[0]}`
-      : 'http://localhost:8082';
+      ? `${KIOSK_BASE_URL}/?kioskId=${requestedKioskIds[0]}`
+      : KIOSK_BASE_URL;
 
     res.status(201).json({
       success: true,
