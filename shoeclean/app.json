@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "KixCleen",
+    "slug": "kixcleen",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "scheme": "shoeclean",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shoeclean.vendo"
+    },
+    "android": {
+      "package": "com.shoeclean.vendo"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-status-bar"
+    ]
+  }
+}

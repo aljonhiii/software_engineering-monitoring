@@ -1,6 +1,54 @@
 {
   "users": [
     {
+      "id": "USR-BUYER-968256",
+      "username": "fulltest",
+      "email": "itsjajareyes@gmail.com",
+      "password_hash": null,
+      "full_name": "fulltest",
+      "phone": "09876543321",
+      "company_name": "company",
+      "role": "buyer",
+      "is_active": 1,
+      "account_status": "invited",
+      "invite_token_hash": "9f2e1886afc375f387fd6eeae84201ea901724ff750f5a0ce5ea5d3c061310cd",
+      "invite_expires_at": "2026-11-20T15:50:00.329Z",
+      "created_at": "2026-11-13T15:49:28.259Z",
+      "updated_at": "2026-11-13T15:50:00.329Z"
+    },
+    {
+      "id": "USR-BUYER-530863",
+      "username": "clarareyes12",
+      "email": "filominavelario@gmail.com",
+      "password_hash": "$2a$10$/nJPMmqUa.0QZrrgwaNjQOfRMD65AKZz5XlFvWLYxaNZWJ9g9jeGm",
+      "full_name": "Full Name",
+      "phone": "09678912341",
+      "company_name": "wmsu",
+      "role": "buyer",
+      "is_active": 1,
+      "account_status": "active",
+      "invite_token_hash": null,
+      "invite_expires_at": null,
+      "created_at": "2026-11-13T14:35:30.864Z",
+      "updated_at": "2026-11-13T14:37:13.421Z"
+    },
+    {
+      "id": "USR-BUYER-507164",
+      "username": "clarareyes",
+      "email": "email@gmail.com",
+      "password_hash": null,
+      "full_name": "Full Name",
+      "phone": "09678912341",
+      "company_name": "wmsu",
+      "role": "buyer",
+      "is_active": 1,
+      "account_status": "invited",
+      "invite_token_hash": "3aa91b4f5e2efc121d0bb47d3aa3d196a99b3f892bb7bbefa72e59b4567a0436",
+      "invite_expires_at": "2026-11-20T14:35:07.164Z",
+      "created_at": "2026-11-13T14:35:07.164Z",
+      "updated_at": "2026-11-13T14:35:07.164Z"
+    },
+    {
       "id": "USR-BUYER-267140",
       "username": "freshowner_test",
       "email": "buyer_inspect_1794580267125@test.com",
@@ -191,7 +239,8 @@
       "invite_token_hash": null,
       "invite_expires_at": null,
       "created_at": "2026-11-13T12:30:14.120Z",
-      "updated_at": "2026-11-13T13:04:57.146Z"
+      "updated_at": "2026-11-13T15:44:52.082Z",
+      "onboarding_completed": 1
     },
     {
       "id": "USR-BUYER-442747",
@@ -1269,8 +1318,8 @@
       "id": "KIOSK-JAYJAY-01",
       "name": "KixCleen Vendo — Jay Branch",
       "city": "Zamboanga City",
-      "address": "stacruz",
-      "location": "stacruz",
+      "address": "Detected Current Position",
+      "location": "Detected Current Position, Brgy. Canelar",
       "status": "online",
       "is_active": 1,
       "is_public": 1,
@@ -1280,11 +1329,11 @@
       "water_level_pct": 89,
       "soap_level_pct": 94,
       "current_activity": "Idle - Ready for customer",
-      "latitude": null,
-      "longitude": null,
+      "latitude": 6.9216499,
+      "longitude": 122.0810299,
       "last_heartbeat": "2026-11-13T13:08:19.418Z",
       "created_at": "2026-11-13T12:30:14.120Z",
-      "updated_at": "2026-11-13T13:08:19.418Z",
+      "updated_at": "2026-11-13T15:44:52.082Z",
       "current_order_id": null
     },
     {
@@ -1453,6 +1502,69 @@
       "current_activity": "Idle - Ready for customer",
       "created_at": "2026-11-13T14:32:36.940Z",
       "updated_at": "2026-11-13T14:32:36.940Z"
+    },
+    {
+      "id": "KIOSK-CLARAREYES-01",
+      "name": "KixCleen Vendo — Full Name Branch",
+      "city": "Zamboanga City",
+      "address": "Main Commercial Station",
+      "location": "Main Commercial Station",
+      "status": "online",
+      "is_active": 1,
+      "is_public": 1,
+      "operating_hours": "8:00 AM - 10:00 PM Daily",
+      "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_activity": "Idle - Ready for customer",
+      "latitude": null,
+      "longitude": null,
+      "last_heartbeat": "2026-11-13T14:35:07.164Z",
+      "created_at": "2026-11-13T14:35:07.164Z",
+      "updated_at": "2026-11-13T14:35:07.164Z"
+    },
+    {
+      "id": "KIOSK-CLARAREYES12-01",
+      "name": "KixCleen Vendo — Full Name Branch",
+      "city": "Zamboanga City",
+      "address": "Main Commercial Station",
+      "location": "Main Commercial Station",
+      "status": "online",
+      "is_active": 1,
+      "is_public": 1,
+      "operating_hours": "8:00 AM - 10:00 PM Daily",
+      "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_activity": "Idle - Ready for customer",
+      "latitude": null,
+      "longitude": null,
+      "last_heartbeat": "2026-11-13T14:35:30.864Z",
+      "created_at": "2026-11-13T14:35:30.864Z",
+      "updated_at": "2026-11-13T14:35:30.864Z"
+    },
+    {
+      "id": "KIOSK-FULLTEST-01",
+      "name": "KixCleen Vendo — fulltest Branch",
+      "city": "Zamboanga City",
+      "address": "stacruz",
+      "location": "stacruz",
+      "status": "online",
+      "is_active": 1,
+      "is_public": 1,
+      "operating_hours": "8:00 AM - 10:00 PM Daily",
+      "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_activity": "Idle - Ready for customer",
+      "latitude": null,
+      "longitude": null,
+      "last_heartbeat": "2026-11-13T15:49:28.259Z",
+      "created_at": "2026-11-13T15:49:28.259Z",
+      "updated_at": "2026-11-13T15:49:28.259Z"
     }
   ],
   "kiosk_owners": [
@@ -1751,6 +1863,30 @@
       "assigned_by": "USR-BUYER-267140",
       "notes": "Auto-provisioned on owner onboarding",
       "assigned_at": "2026-11-13T14:32:36.940Z"
+    },
+    {
+      "id": 1794580507470,
+      "kiosk_id": "KIOSK-CLARAREYES-01",
+      "buyer_id": "USR-BUYER-507164",
+      "assigned_by": "USR-000-SUPERADMIN",
+      "notes": "Dedicated kiosk assigned on owner onboarding",
+      "assigned_at": "2026-11-13T14:35:07.164Z"
+    },
+    {
+      "id": 1794580531396,
+      "kiosk_id": "KIOSK-CLARAREYES12-01",
+      "buyer_id": "USR-BUYER-530863",
+      "assigned_by": "USR-000-SUPERADMIN",
+      "notes": "Dedicated kiosk assigned on owner onboarding",
+      "assigned_at": "2026-11-13T14:35:30.864Z"
+    },
+    {
+      "id": 1794584968764,
+      "kiosk_id": "KIOSK-FULLTEST-01",
+      "buyer_id": "USR-BUYER-968256",
+      "assigned_by": "USR-000-SUPERADMIN",
+      "notes": "Dedicated kiosk assigned on owner onboarding",
+      "assigned_at": "2026-11-13T15:49:28.259Z"
     }
   ],
   "machine_status": [
@@ -2197,6 +2333,42 @@
       "error_code": null,
       "last_heartbeat": "2026-11-13T13:47:34.617Z",
       "updated_at": "2026-11-13T13:47:34.617Z"
+    },
+    {
+      "kiosk_id": "KIOSK-CLARAREYES-01",
+      "status": "online",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_order_id": null,
+      "current_activity": "Idle - Ready for customer",
+      "error_code": null,
+      "last_heartbeat": "2026-11-13T14:35:07.164Z",
+      "updated_at": "2026-11-13T14:35:07.164Z"
+    },
+    {
+      "kiosk_id": "KIOSK-CLARAREYES12-01",
+      "status": "online",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_order_id": null,
+      "current_activity": "Idle - Ready for customer",
+      "error_code": null,
+      "last_heartbeat": "2026-11-13T14:35:30.864Z",
+      "updated_at": "2026-11-13T14:35:30.864Z"
+    },
+    {
+      "kiosk_id": "KIOSK-FULLTEST-01",
+      "status": "online",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_order_id": null,
+      "current_activity": "Idle - Ready for customer",
+      "error_code": null,
+      "last_heartbeat": "2026-11-13T15:49:28.259Z",
+      "updated_at": "2026-11-13T15:49:28.259Z"
     }
   ],
   "transactions": [
