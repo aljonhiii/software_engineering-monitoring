@@ -4,6 +4,12 @@ export const Colors = {
   primaryDark: '#0369A1',
   primaryLight: 'rgba(2, 132, 199, 0.12)',
 
+  // Reference UI Onboarding Palette (Modern Royal Indigo)
+  indigo: '#4F46E5',            // Reference Royal Indigo
+  indigoDark: '#4338CA',
+  indigoLight: 'rgba(79, 70, 229, 0.12)',
+  washBackground: '#EEF2F6',
+
   // Petrol Blue & Teal Brand Accents
   petrol: '#10394F',            // Deep Petrol Blue (KixCleen Hero)
   petrolSurface: '#164863',

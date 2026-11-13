@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import {
   InteractiveKioskMap,
   LocationCoordinate,
 } from '../../components/map/InteractiveKioskMap';
-import { Colors, BorderRadius, Spacing, Shadows } from '../../constants/theme';
+import { Colors, Spacing } from '../../constants/theme';
 
 export default function MapSelectScreen() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function MapSelectScreen() {
   const [selectedLocation, setSelectedLocation] = useState<LocationCoordinate>({
     latitude: initLat,
     longitude: initLng,
-    address: isGpsMethod ? 'Current Detected Position' : 'Gov. Camins Ave (Near KCC Mall)',
+    address: isGpsMethod ? 'Gov. Camins Ave (Detected GPS Position)' : 'Gov. Camins Ave (Near KCC Mall)',
     barangay: 'Canelar',
     city: 'Zamboanga City',
     locationName: 'Gov. Camins Ave, Brgy. Canelar',
@@ -65,6 +65,10 @@ export default function MapSelectScreen() {
     });
   };
 
+  const formattedAddress = `${selectedLocation.address}${
+    selectedLocation.barangay ? `, Brgy. ${selectedLocation.barangay}` : ''
+  }, ${selectedLocation.city || 'Zamboanga City'}`;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -72,85 +76,57 @@ export default function MapSelectScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Navigation Bar */}
-        <View style={styles.navBar}>
+        {/* Navigation Bar matching Reference 2 */}
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+            <Feather name="chevron-left" size={24} color="#1E293B" />
           </TouchableOpacity>
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>Pinpoint Kiosk Location</Text>
-            <Text style={styles.headerSubtitle}>
-              {isGpsMethod ? 'GPS Fix Detected' : 'Manual Placement'}
+          <View style={styles.titleWrapper}>
+            <Text style={styles.screenTitle}>Set location</Text>
+            <Text style={styles.screenSubtitle}>
+              Hi, please confirm your physical kiosk installation location in Zamboanga City.
             </Text>
           </View>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepText}>Step 3 of 3</Text>
-          </View>
+          <View style={{ width: 36 }} />
         </View>
 
-        {/* Instructions banner */}
-        <View style={styles.instructionsBanner}>
-          <Feather name="move" size={16} color={Colors.petrol} />
-          <Text style={styles.instructionsText}>
-            Tap or drag the map pin to the exact physical spot where the kiosk is positioned.
+        {/* Interactive Map */}
+        <View style={styles.mapContainer}>
+          <InteractiveKioskMap
+            initialLatitude={initLat}
+            initialLongitude={initLng}
+            initialAddress={selectedLocation.address}
+            initialBarangay={selectedLocation.barangay}
+            onLocationSelect={handleLocationChange}
+            height={360}
+          />
+        </View>
+
+        {/* Inset Address Card matching Reference 2 */}
+        <View style={styles.addressCard}>
+          <Text style={styles.addressLabel}>Address</Text>
+          <Text style={styles.addressValue} numberOfLines={2}>
+            {formattedAddress}
           </Text>
         </View>
 
-        {/* Interactive Map Component */}
-        <InteractiveKioskMap
-          initialLatitude={initLat}
-          initialLongitude={initLng}
-          initialAddress={selectedLocation.address}
-          initialBarangay={selectedLocation.barangay}
-          onLocationSelect={handleLocationChange}
-          height={380}
-        />
+        {/* Bottom Section with Stadium Pill Button */}
+        <View style={styles.bottomSection}>
+          <TouchableOpacity
+            style={styles.pillButton}
+            onPress={handleProceed}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.pillButtonText}>Set My Location</Text>
+          </TouchableOpacity>
 
-        {/* Summary Preview Card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <View style={styles.pinIconWrap}>
-              <MaterialCommunityIcons name="map-marker-check" size={22} color={Colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>Confirmed Target Spot</Text>
-              <Text style={styles.summaryAddress} numberOfLines={2}>
-                {selectedLocation.address || 'Point Selected'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.summaryDetails}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailKey}>Barangay</Text>
-              <Text style={styles.detailVal}>{selectedLocation.barangay || 'Not specified'}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailKey}>City / Province</Text>
-              <Text style={styles.detailVal}>Zamboanga City</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailKey}>Coordinates</Text>
-              <Text style={styles.detailValCoord}>
-                {selectedLocation.latitude.toFixed(5)}, {selectedLocation.longitude.toFixed(5)}
-              </Text>
-            </View>
-          </View>
+          {/* Clean Home Indicator Bar */}
+          <View style={styles.homeIndicator} />
         </View>
-
-        {/* Primary Action Button */}
-        <TouchableOpacity
-          style={styles.proceedButton}
-          onPress={handleProceed}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.proceedButtonText}>PROCEED TO CONFIRMATION</Text>
-          <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -159,143 +135,109 @@ export default function MapSelectScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-  },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    minHeight: '100%',
     justifyContent: 'space-between',
+  },
+  header: {
+    alignItems: 'center',
     marginBottom: Spacing.md,
+    position: 'relative',
+    paddingTop: Spacing.xs,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleWrap: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.petrol,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  stepBadge: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-  },
-  stepText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  instructionsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(16, 57, 79, 0.06)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
-  },
-  instructionsText: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.petrol,
-    fontWeight: '500',
-  },
-  summaryCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-    ...Shadows.small,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    marginBottom: Spacing.sm,
-  },
-  pinIconWrap: {
+    position: 'absolute',
+    left: 0,
+    top: Spacing.xs,
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.petrol,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
-  summaryLabel: {
+  titleWrapper: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  screenSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 290,
+  },
+  mapContainer: {
+    marginVertical: Spacing.xs,
+  },
+  addressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    marginVertical: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  addressLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primary,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  summaryAddress: {
+  addressValue: {
     fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '600',
+    color: '#1E293B',
+    lineHeight: 20,
   },
-  summaryDetails: {
-    gap: 6,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  bottomSection: {
+    width: '100%',
     alignItems: 'center',
+    marginTop: Spacing.sm,
   },
-  detailKey: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  detailVal: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  detailValCoord: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.petrol,
-    fontFamily: 'monospace',
-  },
-  proceedButton: {
-    flexDirection: 'row',
+  pillButton: {
+    width: '100%',
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.indigo,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.petrol,
-    height: 52,
-    borderRadius: BorderRadius.lg,
-    ...Shadows.medium,
+    shadowColor: Colors.indigo,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  proceedButtonText: {
+  pillButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  homeIndicator: {
+    width: 134,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    marginTop: 18,
   },
 });

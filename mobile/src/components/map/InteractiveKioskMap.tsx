@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
 import { Colors, BorderRadius, Spacing, Shadows } from '../../constants/theme';
 
 export interface LocationCoordinate {
@@ -71,13 +72,13 @@ function generateLeafletHTML(lat: number, lng: number) {
     }
     .pin-pulse {
       position: absolute;
-      width: 38px;
-      height: 38px;
-      background: rgba(0, 210, 180, 0.35);
+      width: 36px;
+      height: 36px;
+      background: rgba(79, 70, 229, 0.25);
       border-radius: 50%;
       animation: pulse 1.8s infinite ease-out;
-      top: -19px;
-      left: -19px;
+      top: -18px;
+      left: -18px;
     }
     .pin-body {
       position: absolute;
@@ -85,18 +86,18 @@ function generateLeafletHTML(lat: number, lng: number) {
       left: -17px;
       width: 34px;
       height: 34px;
-      background: #10394F;
-      border: 3px solid #00D2B4;
+      background: #4F46E5;
+      border: 3px solid #FFFFFF;
       border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg);
-      box-shadow: 0 4px 12px rgba(16, 57, 79, 0.4);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .pin-center {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       background: #FFFFFF;
       border-radius: 50%;
       transform: rotate(45deg);
@@ -194,8 +195,24 @@ export function InteractiveKioskMap({
   const [address, setAddress] = useState<string>(initialAddress);
   const [barangay, setBarangay] = useState<string>(initialBarangay);
   const [isResolvingAddress, setIsResolvingAddress] = useState<boolean>(false);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
   const webIframeRef = useRef<any>(null);
   const nativeWebviewRef = useRef<any>(null);
+
+  const handleLocateMe = async () => {
+    setIsLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        panToLocation(pos.coords.latitude, pos.coords.longitude);
+      }
+    } catch (e) {
+      console.warn('Could not locate user:', e);
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const fallbackAddress = useCallback(
     (lat: number, lng: number) => {
@@ -387,6 +404,20 @@ export function InteractiveKioskMap({
           <Feather name="info" size={12} color={Colors.textSecondary} />
           <Text style={styles.tipText}>Tap map or drag the pin to set kiosk installation point</Text>
         </View>
+
+        {/* Floating Crosshair Button matching reference */}
+        <TouchableOpacity
+          style={styles.gpsCrosshairBtn}
+          onPress={handleLocateMe}
+          activeOpacity={0.8}
+          disabled={isLocating}
+        >
+          {isLocating ? (
+            <ActivityIndicator size="small" color={Colors.indigo} />
+          ) : (
+            <Feather name="crosshair" size={20} color={Colors.indigo} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Address & Barangay Manual Overrides */}
@@ -549,6 +580,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '500',
+  },
+  gpsCrosshairBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   detailsCard: {
     marginTop: Spacing.md,

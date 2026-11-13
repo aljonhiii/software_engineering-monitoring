@@ -102,11 +102,8 @@ export default function LocationMethodScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+            <Feather name="chevron-left" size={24} color="#1E293B" />
           </TouchableOpacity>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepText}>Step 2 of 3</Text>
-          </View>
         </View>
 
         {/* Screen Heading */}
@@ -358,23 +355,29 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   actionBtn: {
-    height: 48,
-    borderRadius: BorderRadius.lg,
+    height: 52,
+    borderRadius: 26,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.indigo,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   gpsBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.indigo,
   },
   manualBtn: {
-    backgroundColor: Colors.petrol,
+    backgroundColor: '#1E293B',
+    shadowColor: '#1E293B',
   },
   actionBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -390,7 +393,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1',
   },
   dotActive: {
-    width: 24,
-    backgroundColor: Colors.petrol,
+    width: 20,
+    backgroundColor: Colors.indigo,
   },
 });
