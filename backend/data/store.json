@@ -1,6 +1,22 @@
 {
   "users": [
     {
+      "id": "USR-BUYER-476518",
+      "username": "testsample",
+      "email": "aljonreyes2005@gmail.com",
+      "password_hash": null,
+      "full_name": "TestSample",
+      "phone": "09897832121",
+      "company_name": "testsample",
+      "role": "buyer",
+      "is_active": 1,
+      "account_status": "invited",
+      "invite_token_hash": "477490bac775131259ff0cb467612d73c64050e3ddac0c22ab600a7b9609b5d4",
+      "invite_expires_at": "2026-11-20T11:20:59.720Z",
+      "created_at": "2026-11-13T11:14:36.518Z",
+      "updated_at": "2026-11-13T11:20:59.720Z"
+    },
+    {
       "id": "USR-BUYER-116755",
       "username": "owner_7206",
       "email": "owner_7206@partner.ph",
@@ -43,10 +59,10 @@
       "role": "buyer",
       "is_active": 1,
       "account_status": "invited",
-      "invite_token_hash": "ea192474e61413b87b40cbeff55e22b72327c9996aa009bfe4bd9f8afa3d2dc5",
-      "invite_expires_at": "2026-11-20T11:08:16.157Z",
+      "invite_token_hash": "861dc1b7adb69ca53cde17f11b1f349cef73b0a10bac97507cb77a88aada6142",
+      "invite_expires_at": "2026-11-20T11:13:39.212Z",
       "created_at": "2026-11-13T11:08:16.158Z",
-      "updated_at": "2026-11-13T11:08:16.158Z"
+      "updated_at": "2026-11-13T11:13:39.212Z"
     },
     {
       "id": "USR-BUYER-870173",
@@ -885,6 +901,27 @@
       "last_heartbeat": "2026-11-13T11:08:36.755Z",
       "created_at": "2026-11-13T11:08:36.755Z",
       "updated_at": "2026-11-13T11:08:36.755Z"
+    },
+    {
+      "id": "123",
+      "name": "321",
+      "city": "321",
+      "address": "21",
+      "location": "21",
+      "status": "online",
+      "is_active": 1,
+      "is_public": 1,
+      "operating_hours": "8:00 AM - 10:00 PM Daily",
+      "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_activity": "Idle - Ready for customer",
+      "latitude": null,
+      "longitude": null,
+      "last_heartbeat": "2026-11-13T11:14:36.518Z",
+      "created_at": "2026-11-13T11:14:36.518Z",
+      "updated_at": "2026-11-13T11:14:36.518Z"
     }
   ],
   "kiosk_owners": [
@@ -1071,6 +1108,14 @@
       "assigned_by": "USR-000-SUPERADMIN",
       "notes": "Dedicated kiosk assigned on owner onboarding",
       "assigned_at": "2026-11-13T11:08:36.755Z"
+    },
+    {
+      "id": 1794568476864,
+      "kiosk_id": "123",
+      "buyer_id": "USR-BUYER-476518",
+      "assigned_by": "USR-000-SUPERADMIN",
+      "notes": "Dedicated kiosk assigned on owner onboarding",
+      "assigned_at": "2026-11-13T11:14:36.518Z"
     }
   ],
   "machine_status": [
@@ -1361,6 +1406,18 @@
       "error_code": null,
       "last_heartbeat": "2026-11-13T11:08:36.755Z",
       "updated_at": "2026-11-13T11:08:36.755Z"
+    },
+    {
+      "kiosk_id": "123",
+      "status": "online",
+      "door_locked": 0,
+      "water_level_pct": 100,
+      "soap_level_pct": 100,
+      "current_order_id": null,
+      "current_activity": "Idle - Ready for customer",
+      "error_code": null,
+      "last_heartbeat": "2026-11-13T11:14:36.518Z",
+      "updated_at": "2026-11-13T11:14:36.518Z"
     }
   ],
   "transactions": [

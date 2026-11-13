@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import os from 'os';
+import dotenv from 'dotenv';
 
 /**
  * Detect primary physical IPv4 address for fallback LAN links.
@@ -40,11 +41,14 @@ export function getFrontendBaseUrl() {
  * Creates and verifies nodemailer transporter if credentials exist.
  */
 function getTransporter() {
+  // Dynamically reload .env to ensure fresh credentials even if server was not restarted
+  dotenv.config({ override: true });
+
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   const user = process.env.SMTP_USER ? String(process.env.SMTP_USER).trim() : '';
-  const pass = process.env.SMTP_PASS ? String(process.env.SMTP_PASS).trim() : '';
+  const pass = process.env.SMTP_PASS ? String(process.env.SMTP_PASS).replace(/\s+/g, '') : '';
 
   if (!user || !pass) {
     return null;
@@ -184,8 +188,12 @@ export async function sendBuyerInvitationEmail({
   expiresAt = null,
 }) {
   const cleanTo = String(to).trim();
-  const from = process.env.SMTP_FROM || `"KixCleen Platform" <noreply@kixcleen.com>`;
   const transporter = getTransporter();
+  const user = process.env.SMTP_USER ? String(process.env.SMTP_USER).trim() : '';
+  let from = process.env.SMTP_FROM || `"KixCleen Platform" <${user || 'noreply@kixcleen.com'}>`;
+  if (user && user.endsWith('@gmail.com') && from.includes('@kixcleen.com')) {
+    from = `"KixCleen Platform" <${user}>`;
+  }
 
   if (!transporter) {
     // Development / Safe fallback mode when SMTP credentials are not yet set
