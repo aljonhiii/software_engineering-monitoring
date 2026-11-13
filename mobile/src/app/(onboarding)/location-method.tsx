@@ -217,6 +217,9 @@ export default function LocationMethodScreen() {
               >
                 Not at the installation site yet? Search for your city and barangay, then pinpoint the exact location on the map.
               </Text>
+              <Text style={styles.cardHelper}>
+                Pinpoint your exact spot manually. You can drag the pin to any street in Zamboanga City.
+              </Text>
             </View>
             <View
               style={[
@@ -227,6 +230,17 @@ export default function LocationMethodScreen() {
               {selectedMethod === 'manual' && <View style={styles.radioDot} />}
             </View>
           </TouchableOpacity>
+
+          {/* Helpful Guidance Card */}
+          <View style={styles.guidanceCard}>
+            <View style={styles.guidanceHeader}>
+              <Feather name="info" size={14} color="#64748B" />
+              <Text style={styles.guidanceTitle}>Why register your kiosk location?</Text>
+            </View>
+            <Text style={styles.guidanceBody}>
+              Your physical coordinates place your kiosk on the public customer locator map and connect live telemetry directly to your owner dashboard.
+            </Text>
+          </View>
         </View>
 
         {/* Bottom Section */}
@@ -248,7 +262,9 @@ export default function LocationMethodScreen() {
             {isRequestingGps ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.pillButtonText}>Continue</Text>
+              <Text style={styles.pillButtonText}>
+                {selectedMethod === 'gps' ? 'Use Current Location' : 'Select on Map'}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -345,12 +361,12 @@ const styles = StyleSheet.create({
   methodCardActive: {
     borderColor: Colors.indigo,
     borderWidth: 2,
-    backgroundColor: 'rgba(79, 70, 229, 0.05)',
-    shadowColor: Colors.indigo,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: '#F1F5F9', // dark white when chosen (removes violet light)
+    shadowColor: '#000',        // clean neutral shadow (removes violet glow)
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconWash: {
     width: 44,
@@ -373,7 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardTitleActive: {
-    color: Colors.indigo,
+    color: '#0F172A', // deep dark slate (removes violet text)
   },
   cardSubtitle: {
     fontSize: 12,
@@ -381,7 +397,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   cardSubtitleActive: {
-    color: '#4338CA',
+    color: '#475569', // clear slate (removes violet text)
     fontWeight: '500',
   },
   cardHelper: {
@@ -401,13 +417,37 @@ const styles = StyleSheet.create({
   },
   radioRingActive: {
     borderColor: Colors.indigo,
-    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    backgroundColor: '#FFFFFF', // clean white inside ring (removes violet wash)
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.indigo,
+  },
+  guidanceCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: Spacing.md,
+    marginTop: 4,
+  },
+  guidanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  guidanceTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  guidanceBody: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 16,
   },
   bottomSection: {
     width: '100%',
