@@ -1070,6 +1070,66 @@ export async function updateAdminBuyerStatus(req, res) {
   }
 }
 
+/**
+ * DELETE /api/admin/buyers/:id
+ * Permanently delete a buyer/owner account and release their email.
+ * Cascades unassignment of any owned kiosks so kiosks become available.
+ */
+export async function deleteAdminBuyer(req, res) {
+  try {
+    const { id } = req.params;
+    const { db, users } = await fetchAllDataForAdmin();
+    const target = users.find((u) => u.id === id);
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'Buyer account not found.' });
+    }
+
+    if (target.role === 'superadmin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete a Super Admin account.',
+      });
+    }
+
+    // Clean up rate limits if any
+    emailRateLimits.delete(id);
+
+    if (db) {
+      // 1. Delete kiosk assignments for this buyer
+      await db.query('DELETE FROM kiosk_owners WHERE buyer_id = ?', [id]);
+      // 2. Delete any push notification tokens
+      try {
+        await db.query('DELETE FROM push_tokens WHERE user_id = ?', [id]);
+      } catch (_) {}
+      // 3. Delete the user record
+      await db.query('DELETE FROM users WHERE id = ?', [id]);
+    } else {
+      // Memory store / store.json fallback
+      memoryStore.users = memoryStore.users.filter((u) => u.id !== id);
+      memoryStore.kiosk_owners = memoryStore.kiosk_owners.filter((o) => o.buyer_id !== id);
+      if (Array.isArray(memoryStore.tokens)) {
+        memoryStore.tokens = memoryStore.tokens.filter((t) => t.user_id !== id);
+      }
+      saveMemoryStore();
+    }
+
+    console.log(
+      `[Admin] Deleted buyer '${target.full_name}' (${target.email}, ID: ${id}). Email is now released for re-invitation.`
+    );
+
+    res.json({
+      success: true,
+      message: `Buyer account '${target.full_name}' (${target.email}) was deleted successfully. The email has been released and can be re-invited.`,
+      deletedId: id,
+      deletedEmail: target.email,
+    });
+  } catch (err) {
+    console.error('[Admin] Error deleting buyer:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
 const emailRateLimits = new Map();
 
 /**

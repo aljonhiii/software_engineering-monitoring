@@ -10,6 +10,7 @@ import {
   createAdminBuyer,
   updateAdminBuyer,
   updateAdminBuyerStatus,
+  deleteAdminBuyer,
   generateBuyerInvite,
   getAdminAssignments,
   assignKiosksToBuyer,
@@ -38,6 +39,7 @@ router.get('/buyers', getAdminBuyers);
 router.post('/buyers', createAdminBuyer);
 router.put('/buyers/:id', updateAdminBuyer);
 router.patch('/buyers/:id/status', updateAdminBuyerStatus);
+router.delete('/buyers/:id', deleteAdminBuyer);
 router.post('/buyers/:id/invite', generateBuyerInvite);
 
 // Kiosk Ownership Assignment Management
