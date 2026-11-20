@@ -17,13 +17,14 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardStatsApi } from '../../api/dashboardApi';
 import { getSalesReportsApi } from '../../api/salesApi';
-import { DashboardStats, SalesReport, KioskSummary } from '../../types';
+import { DashboardStats, SalesReport, KioskSummary, Transaction } from '../../types';
 import { formatCurrency } from '../../utils/formatting';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { LoadingView } from '../../components/common/LoadingView';
 import { SalesBarChart } from '../../components/sales/SalesBarChart';
 import { RecentTransactionCard } from '../../components/dashboard/RecentTransactionCard';
 import { NotificationsModal, NotificationItem } from '../../components/common/NotificationsModal';
+import { DigitalReceiptModal } from '../../components/common/DigitalReceiptModal';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function DashboardScreen() {
   // Kiosk switcher state
   const [selectedKioskId, setSelectedKioskId] = useState<string | null>(null); // null = All Kiosks
   const [isSwitcherOpen, setIsSwitcherOpen] = useState<boolean>(false);
+  const [persistedKiosks, setPersistedKiosks] = useState<KioskSummary[]>([]);
+  const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
 
   // Dynamic system notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -202,6 +205,13 @@ export default function DashboardScreen() {
     }
   };
 
+  // Fleet data - persist so dropdown never disappears when selecting a single kiosk
+  useEffect(() => {
+    if (stats?.ownedKiosks && stats.ownedKiosks.length > 0) {
+      setPersistedKiosks(stats.ownedKiosks);
+    }
+  }, [stats?.ownedKiosks]);
+
   if (loading && !stats) {
     return <LoadingView message="Loading fleet dashboard..." />;
   }
@@ -210,10 +220,10 @@ export default function DashboardScreen() {
   // Show only 6 recent orders on main dashboard as requested
   const recentSixOrders = (stats?.recentTransactions || []).slice(0, 6);
 
-  // Fleet data
-  const ownedKiosks: KioskSummary[] = stats?.ownedKiosks || [];
+  const activeKiosks = persistedKiosks.length > 0 ? persistedKiosks : (stats?.ownedKiosks || []);
+  const ownedKiosks = activeKiosks;
+  const hasMultipleKiosks = activeKiosks.length > 1;
   const fleetHealth = stats?.fleetHealth;
-  const hasMultipleKiosks = ownedKiosks.length > 1;
 
   // Label for the kiosk switcher button
   const switcherLabel = selectedKioskId
@@ -249,7 +259,7 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* ── Minimal Kiosk Selector Pill (No verbose cards/descriptions) ── */}
+        {/* ── Plain Minimal Kiosk Selector Pill (No color / neutral) ── */}
         {hasMultipleKiosks && (
           <View style={styles.switcherWrapper}>
             <TouchableOpacity
@@ -257,7 +267,7 @@ export default function DashboardScreen() {
               onPress={() => setIsSwitcherOpen(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="storefront-outline" size={14} color="#0284C7" />
+              <Ionicons name="storefront-outline" size={14} color="#475569" />
               <Text style={styles.switcherLabel} numberOfLines={1}>
                 {switcherLabel}
               </Text>
@@ -408,7 +418,7 @@ export default function DashboardScreen() {
                 cleaningStatus={tx.cleaningStatus}
                 createdAt={tx.createdAt}
                 kioskName={hasMultipleKiosks ? tx.kioskName : undefined}
-                onPress={() => router.push(`/(tabs)/transactions/${tx.orderId}` as any)}
+                onPress={() => setSelectedReceiptTx(tx as any)}
               />
             ))}
 
@@ -446,6 +456,13 @@ export default function DashboardScreen() {
         onMarkAllAsRead={handleMarkAllAsRead}
         onClearAll={handleClearAll}
         onNotificationPress={handleNotificationPress}
+      />
+
+      {/* Digital Receipt Modal: Instant, No Page Reload */}
+      <DigitalReceiptModal
+        visible={Boolean(selectedReceiptTx)}
+        onClose={() => setSelectedReceiptTx(null)}
+        transaction={selectedReceiptTx}
       />
 
       {/* Kiosk Switcher Modal */}
@@ -538,19 +555,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 14,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: BorderRadius.pill,
     marginBottom: Spacing.sm,
+    ...Shadows.small,
   },
   switcherLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1D4ED8',
-    maxWidth: 200,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+    maxWidth: 220,
   },
   // ── Dark Hero Card ──────────────────────────────────────────────────
   darkHeroCard: {

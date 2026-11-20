@@ -39,13 +39,15 @@ export async function getDashboardStats(req, res) {
     }
 
     // Scope kiosks and transactions to buyer's assigned kiosks
+    let allOwnerKiosks = [...kiosks];
     if (authorizedKioskIds !== null) {
-      kiosks = kiosks.filter((k) => authorizedKioskIds.includes(k.id));
+      allOwnerKiosks = allOwnerKiosks.filter((k) => authorizedKioskIds.includes(k.id));
       allTransactions = allTransactions.filter((t) => authorizedKioskIds.includes(t.kiosk_id));
     }
 
+    let scopedKiosks = [...allOwnerKiosks];
     if (kioskId) {
-      kiosks = kiosks.filter((k) => k.id === String(kioskId));
+      scopedKiosks = scopedKiosks.filter((k) => k.id === String(kioskId));
       allTransactions = allTransactions.filter((t) => t.kiosk_id === String(kioskId));
     }
 
@@ -71,9 +73,9 @@ export async function getDashboardStats(req, res) {
     const completedCleaning = allTransactions.filter((t) => t.cleaning_status === 'completed').length;
     const activeCleaning = allTransactions.filter((t) => t.cleaning_status === 'in_progress').length;
 
-    // Build kiosk name lookup
+    // Build kiosk name lookup across all owner kiosks
     const kioskNameMap = {};
-    for (const k of kiosks) {
+    for (const k of allOwnerKiosks) {
       kioskNameMap[k.id] = k.name;
     }
 
@@ -92,11 +94,11 @@ export async function getDashboardStats(req, res) {
       createdAt: t.created_at,
     }));
 
-    // Primary kiosk state (or null/offline placeholder if buyer has 0 assigned kiosks)
-    const primaryKiosk = kiosks[0] || null;
+    // Primary kiosk state for selected view (or fleet fallback)
+    const primaryKiosk = scopedKiosks[0] || allOwnerKiosks[0] || null;
 
     const activities = allTransactions.slice(0, 10).map((t) => {
-      const matchedKiosk = kiosks.find((k) => k.id === t.kiosk_id);
+      const matchedKiosk = allOwnerKiosks.find((k) => k.id === t.kiosk_id);
       return {
         id: `act-${t.id}`,
         type: t.cleaning_status === 'completed' ? 'cleaning_completed' : 'payment_received',
@@ -110,13 +112,13 @@ export async function getDashboardStats(req, res) {
     });
 
     // Fleet health summary across all owner's kiosks
-    const fleetOnline = kiosks.filter((k) => k.status === 'online').length;
-    const fleetBusy = kiosks.filter((k) => k.status === 'busy').length;
-    const fleetMaintenance = kiosks.filter((k) => k.status === 'maintenance').length;
-    const fleetOffline = kiosks.filter((k) => k.status === 'offline').length;
+    const fleetOnline = allOwnerKiosks.filter((k) => k.status === 'online').length;
+    const fleetBusy = allOwnerKiosks.filter((k) => k.status === 'busy').length;
+    const fleetMaintenance = allOwnerKiosks.filter((k) => k.status === 'maintenance').length;
+    const fleetOffline = allOwnerKiosks.filter((k) => k.status === 'offline').length;
 
-    // Fleet kiosk summaries for the mobile kiosk switcher / cards carousel
-    const ownedKiosks = kiosks.map((k) => ({
+    // Fleet kiosk summaries — always return ALL owner's kiosks so switcher dropdown never disappears
+    const ownedKiosks = allOwnerKiosks.map((k) => ({
       id: k.id,
       name: k.name,
       location: k.location || k.address || '',
@@ -141,7 +143,7 @@ export async function getDashboardStats(req, res) {
         failedPaymentsCount: failedTransactions.length,
         completedCleansCount: completedCleaning,
         activeCleansCount: activeCleaning,
-        assignedKiosksCount: kiosks.length,
+        assignedKiosksCount: allOwnerKiosks.length,
         primaryKioskId: primaryKiosk ? primaryKiosk.id : null,
         primaryKioskName: primaryKiosk ? primaryKiosk.name : 'No Kiosk Assigned',
         machineStatus: primaryKiosk ? primaryKiosk.status : 'offline',
@@ -159,7 +161,7 @@ export async function getDashboardStats(req, res) {
           busy: fleetBusy,
           maintenance: fleetMaintenance,
           offline: fleetOffline,
-          total: kiosks.length,
+          total: allOwnerKiosks.length,
         },
       },
     });

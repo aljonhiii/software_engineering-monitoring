@@ -11,7 +11,7 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { useSocket } from '../../../context/SocketContext';
@@ -22,11 +22,11 @@ import { Transaction, KioskMachine } from '../../../types';
 import { ScreenHeader } from '../../../components/common/ScreenHeader';
 import { RecentTransactionCard } from '../../../components/dashboard/RecentTransactionCard';
 import { LoadingView } from '../../../components/common/LoadingView';
+import { DigitalReceiptModal } from '../../../components/common/DigitalReceiptModal';
 
 const STATUS_FILTERS = ['All', 'Paid', 'Pending', 'Failed'];
 
 export default function TransactionsListScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ kioskId?: string }>();
   const { socket } = useSocket();
   const { user } = useAuth();
@@ -41,6 +41,7 @@ export default function TransactionsListScreen() {
   const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
   const [selectedKioskId, setSelectedKioskId] = useState<string | null>(params.kioskId || null);
   const [isKioskPickerOpen, setIsKioskPickerOpen] = useState<boolean>(false);
+  const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
 
   // Sync selectedKioskId if route param changes
   useEffect(() => {
@@ -199,14 +200,14 @@ export default function TransactionsListScreen() {
           )}
         </View>
 
-        {/* Kiosk Dropdown Bar */}
+        {/* Kiosk Dropdown Bar (Plain, neutral styling) */}
         <View style={styles.filterControlRow}>
           <TouchableOpacity
             style={styles.kioskDropdownBtn}
             onPress={() => setIsKioskPickerOpen(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="storefront-outline" size={14} color="#0284C7" />
+            <Ionicons name="storefront-outline" size={14} color="#475569" />
             <Text style={styles.kioskDropdownText} numberOfLines={1}>
               {kioskDropdownLabel}
             </Text>
@@ -271,7 +272,7 @@ export default function TransactionsListScreen() {
               cleaningStatus={item.cleaningStatus}
               createdAt={item.createdAt}
               kioskName={item.kioskName || (kiosks.find((k) => k.id === item.kioskId)?.name)}
-              onPress={() => router.push(`/(tabs)/transactions/${item.orderId}` as any)}
+              onPress={() => setSelectedReceiptTx(item)}
             />
           )}
           ListEmptyComponent={
@@ -287,6 +288,13 @@ export default function TransactionsListScreen() {
           }
         />
       )}
+
+      {/* Digital Receipt Modal: Instant, No Page Reload */}
+      <DigitalReceiptModal
+        visible={Boolean(selectedReceiptTx)}
+        onClose={() => setSelectedReceiptTx(null)}
+        transaction={selectedReceiptTx}
+      />
 
       {/* Kiosk Dropdown Modal Picker */}
       <Modal
@@ -421,17 +429,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
     borderRadius: BorderRadius.pill,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     maxWidth: '75%',
+    ...Shadows.small,
   },
   kioskDropdownText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
   },
   resetFilterBtn: {
@@ -441,7 +450,7 @@ const styles = StyleSheet.create({
   resetFilterText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#0284C7',
+    color: '#64748B',
   },
   chipsRow: {
     flexDirection: 'row',
@@ -525,9 +534,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   pickerOptionActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
   },
   statusDot: {
     width: 8,
@@ -543,7 +552,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   pickerOptionTextActive: {
-    color: '#0284C7',
+    color: '#0F172A',
     fontWeight: '700',
   },
   pickerOptionSub: {

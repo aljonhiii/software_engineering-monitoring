@@ -98,7 +98,7 @@ export default function SalesScreen() {
           />
         }
       >
-        {/* Kiosk Dropdown Filter Button */}
+        {/* Plain Kiosk Dropdown Filter Button (No color) */}
         {kiosks.length > 1 && (
           <View style={styles.kioskFilterRow}>
             <TouchableOpacity
@@ -106,7 +106,7 @@ export default function SalesScreen() {
               onPress={() => setIsKioskPickerOpen(true)}
               activeOpacity={0.7}
             >
-              <Ionicons name="storefront-outline" size={14} color="#0284C7" />
+              <Ionicons name="storefront-outline" size={14} color="#475569" />
               <Text style={styles.kioskDropdownLabel} numberOfLines={1}>
                 {selectedKioskName}
               </Text>
@@ -265,7 +265,7 @@ export default function SalesScreen() {
               <Ionicons
                 name="layers-outline"
                 size={18}
-                color={!selectedKioskId ? '#0284C7' : '#64748B'}
+                color={!selectedKioskId ? '#0F172A' : '#64748B'}
               />
               <View style={styles.pickerOptionInfo}>
                 <Text
@@ -281,7 +281,7 @@ export default function SalesScreen() {
                 </Text>
               </View>
               {!selectedKioskId && (
-                <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                <Ionicons name="checkmark-circle" size={18} color="#0F172A" />
               )}
             </TouchableOpacity>
 
@@ -304,7 +304,7 @@ export default function SalesScreen() {
                   <Ionicons
                     name="storefront-outline"
                     size={18}
-                    color={isSelected ? '#0284C7' : '#64748B'}
+                    color={isSelected ? '#0F172A' : '#64748B'}
                   />
                   <View style={styles.pickerOptionInfo}>
                     <Text
@@ -321,7 +321,7 @@ export default function SalesScreen() {
                     </Text>
                   </View>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                    <Ionicons name="checkmark-circle" size={18} color="#0F172A" />
                   )}
                 </TouchableOpacity>
               );
@@ -352,17 +352,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
     borderRadius: BorderRadius.pill,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     maxWidth: '75%',
+    ...Shadows.small,
   },
   kioskDropdownLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
   },
   clearKioskFilterBtn: {
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
   clearKioskFilterText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#0284C7',
+    color: '#64748B',
   },
   periodRow: {
     flexDirection: 'row',
@@ -521,9 +522,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   pickerOptionActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
   },
   pickerOptionInfo: {
     flex: 1,
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   pickerOptionTextActive: {
-    color: '#0284C7',
+    color: '#0F172A',
     fontWeight: '700',
   },
   pickerOptionSub: {

@@ -23,6 +23,7 @@ export default function TransactionDetailScreen() {
 
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -30,9 +31,12 @@ export default function TransactionDetailScreen() {
       const res = await getTransactionDetailApi(id);
       if (res.success && res.transaction) {
         setTransaction(res.transaction);
+      } else {
+        setErrorMsg('Transaction could not be found.');
       }
     } catch (err: any) {
       console.warn('[TransactionDetail] Fetch error:', err.message);
+      setErrorMsg(err.message || 'Failed to load receipt.');
     } finally {
       setLoading(false);
     }
@@ -54,8 +58,24 @@ export default function TransactionDetailScreen() {
     }
   };
 
-  if (loading || !transaction) {
+  if (loading) {
     return <LoadingView message="Loading digital receipt..." />;
+  }
+
+  if (!transaction) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="receipt-outline" size={48} color="#94A3B8" />
+          <Text style={styles.errorTitle}>Receipt Not Found</Text>
+          <Text style={styles.errorSub}>{errorMsg || 'Unable to retrieve transaction details.'}</Text>
+          <TouchableOpacity style={styles.errorBackBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={16} color="#FFFFFF" />
+            <Text style={styles.errorBackBtnText}>Back to Transactions</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const subtotal = transaction.basePrice + (transaction.addonsPrice || 0);
@@ -449,5 +469,39 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#94A3B8',
     textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: Spacing.sm,
+  },
+  errorSub: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    maxWidth: 260,
+  },
+  errorBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.pill,
+    marginTop: Spacing.md,
+  },
+  errorBackBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

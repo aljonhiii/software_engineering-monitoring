@@ -4,7 +4,7 @@ import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Owner and Admin can view sales reports
-router.get('/reports', verifyToken, requireRole(['owner', 'admin']), getSalesReports);
+// Owner, Buyer, and Admin can view sales reports
+router.get('/reports', verifyToken, requireRole(['owner', 'buyer', 'admin', 'superadmin']), getSalesReports);
 
 export default router;

@@ -172,7 +172,7 @@ export default function SettingsScreen() {
                       activeOpacity={0.7}
                     >
                       <Text style={styles.viewTxBtnText}>Transactions</Text>
-                      <Ionicons name="arrow-forward" size={12} color="#0284C7" />
+                      <Ionicons name="arrow-forward" size={12} color="#475569" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -462,9 +462,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
     borderRadius: BorderRadius.pill,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   viewTxBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#0284C7',
+    color: '#0F172A',
   },
   emptyKioskBox: {
     alignItems: 'center',
