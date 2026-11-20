@@ -190,8 +190,23 @@ export async function recordHeartbeat(req, res) {
       lastHeartbeat: new Date().toISOString(),
     };
 
-    // Real-time broadcast to connected apps
-    broadcastMachineStatus(payload);
+    // Real-time broadcast to connected apps (scoped to kiosk owners)
+    // Resolve all buyer IDs that own this kiosk and emit to their rooms
+    const db2 = await getDbConnection();
+    let ownerIds = [];
+    if (db2) {
+      const [ownerRows] = await db2.query(
+        'SELECT buyer_id FROM kiosk_owners WHERE kiosk_id = ?',
+        [kioskId]
+      );
+      ownerIds = ownerRows.map((r) => r.buyer_id);
+    } else {
+      ownerIds = memoryStore.kiosk_owners
+        .filter((ko) => ko.kiosk_id === kioskId)
+        .map((ko) => ko.buyer_id);
+    }
+
+    broadcastMachineStatus(payload, ownerIds);
 
     // Consumable refill alerts
     if (waterLevelPercent <= 15) {
@@ -213,7 +228,7 @@ export async function recordHeartbeat(req, res) {
         type: 'error',
         message: `Hardware Error [${errorCode}] on ${kioskId}`,
         time: new Date().toISOString(),
-      });
+      }, ownerIds);
       sendPushNotification(
         '🚨 Machine Error Detected',
         `Hardware Error Code: ${errorCode} on Kiosk ${kioskId}`,

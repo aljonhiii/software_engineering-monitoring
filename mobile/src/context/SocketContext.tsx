@@ -14,7 +14,7 @@ const SocketContext = createContext<SocketContextValue>({
 });
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
@@ -39,6 +39,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socketInstance.on('connect', () => {
       console.log('⚡ [SocketContext] Connected to backend Socket.IO');
       setIsConnected(true);
+      // Join this owner's private room so targeted events arrive
+      if (user?.id) {
+        socketInstance.emit('owner:register', { ownerId: user.id });
+        console.log(`⚡ [SocketContext] Registered owner room: owner:${user.id}`);
+      }
     });
 
     socketInstance.on('disconnect', () => {

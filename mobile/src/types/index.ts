@@ -46,6 +46,26 @@ export interface Transaction {
   createdAt: string;
 }
 
+export interface KioskSummary {
+  id: string;
+  name: string;
+  location: string;
+  city: string;
+  status: 'online' | 'offline' | 'busy' | 'error' | 'maintenance';
+  waterLevelPercent: number;
+  soapLevelPercent: number;
+  doorLocked: boolean;
+  currentActivity: string;
+}
+
+export interface FleetHealth {
+  online: number;
+  busy: number;
+  maintenance: number;
+  offline: number;
+  total: number;
+}
+
 export interface DashboardStats {
   todayRevenue: number;
   todayTransactionsCount: number;
@@ -70,6 +90,7 @@ export interface DashboardStats {
     id: string;
     orderId: string;
     kioskId?: string;
+    kioskName?: string;
     shoeType: string;
     serviceName: string;
     totalAmount: number;
@@ -85,6 +106,9 @@ export interface DashboardStats {
     time: string;
     kioskName?: string;
   }>;
+  // Multi-kiosk fleet data
+  ownedKiosks?: KioskSummary[];
+  fleetHealth?: FleetHealth;
 }
 
 export interface KioskMachine {

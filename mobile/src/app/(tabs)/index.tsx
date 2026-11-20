@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Modal,
+  FlatList,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,7 +18,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardStatsApi } from '../../api/dashboardApi';
 import { getSalesReportsApi } from '../../api/salesApi';
-import { DashboardStats, SalesReport } from '../../types';
+import { DashboardStats, SalesReport, KioskSummary } from '../../types';
 import { formatCurrency } from '../../utils/formatting';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { LoadingView } from '../../components/common/LoadingView';
@@ -33,6 +36,10 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+
+  // Kiosk switcher state
+  const [selectedKioskId, setSelectedKioskId] = useState<string | null>(null); // null = All Kiosks
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState<boolean>(false);
 
   // Dynamic system notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -73,7 +80,7 @@ export default function DashboardScreen() {
   const fetchStats = useCallback(async () => {
     try {
       const [statsRes, salesRes] = await Promise.allSettled([
-        getDashboardStatsApi(),
+        getDashboardStatsApi(selectedKioskId),
         getSalesReportsApi('week'),
       ]);
 
@@ -89,7 +96,7 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedKioskId]);
 
   useEffect(() => {
     fetchStats();
@@ -204,6 +211,21 @@ export default function DashboardScreen() {
   // Show only 6 recent orders on main dashboard as requested
   const recentSixOrders = (stats?.recentTransactions || []).slice(0, 6);
 
+  // Fleet data
+  const ownedKiosks: KioskSummary[] = stats?.ownedKiosks || [];
+  const fleetHealth = stats?.fleetHealth;
+  const hasMultipleKiosks = ownedKiosks.length > 1;
+
+  // Label for the kiosk switcher button
+  const switcherLabel = selectedKioskId
+    ? (ownedKiosks.find((k) => k.id === selectedKioskId)?.name || selectedKioskId)
+    : 'All Kiosks';
+
+  // Filtered recent orders when a specific kiosk is selected
+  const filteredOrders = selectedKioskId
+    ? recentSixOrders.filter((t) => t.kioskId === selectedKioskId)
+    : recentSixOrders;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Standard ScreenHeader: Unified with rest of the app */}
@@ -228,9 +250,134 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* ── Kiosk Switcher ── only shown when owner has multiple kiosks */}
+        {hasMultipleKiosks && (
+          <View style={styles.switcherWrapper}>
+            <TouchableOpacity
+              style={styles.switcherPill}
+              onPress={() => setIsSwitcherOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="layers-outline" size={14} color="#0284C7" />
+              <Text style={styles.switcherLabel} numberOfLines={1}>
+                {switcherLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#64748B" />
+            </TouchableOpacity>
+
+            {/* Fleet health chips */}
+            {fleetHealth && (
+              <View style={styles.fleetHealthRow}>
+                {fleetHealth.online > 0 && (
+                  <View style={[styles.healthChip, styles.healthOnline]}>
+                    <View style={[styles.healthDot, { backgroundColor: '#10B981' }]} />
+                    <Text style={styles.healthChipText}>{fleetHealth.online} Online</Text>
+                  </View>
+                )}
+                {fleetHealth.busy > 0 && (
+                  <View style={[styles.healthChip, styles.healthBusy]}>
+                    <View style={[styles.healthDot, { backgroundColor: '#3B82F6' }]} />
+                    <Text style={styles.healthChipText}>{fleetHealth.busy} In Wash</Text>
+                  </View>
+                )}
+                {fleetHealth.maintenance > 0 && (
+                  <View style={[styles.healthChip, styles.healthMaint]}>
+                    <View style={[styles.healthDot, { backgroundColor: '#F59E0B' }]} />
+                    <Text style={styles.healthChipText}>{fleetHealth.maintenance} Maintenance</Text>
+                  </View>
+                )}
+                {fleetHealth.offline > 0 && (
+                  <View style={[styles.healthChip, styles.healthOffline]}>
+                    <View style={[styles.healthDot, { backgroundColor: '#94A3B8' }]} />
+                    <Text style={styles.healthChipText}>{fleetHealth.offline} Offline</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── Kiosk Cards Carousel ── horizontal swipeable fleet cards */}
+        {hasMultipleKiosks && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.kioskCardsRow}
+          >
+            {ownedKiosks.map((kiosk) => {
+              const isSelected = selectedKioskId === kiosk.id;
+              const statusColor =
+                kiosk.status === 'online'
+                  ? '#10B981'
+                  : kiosk.status === 'busy'
+                  ? '#3B82F6'
+                  : kiosk.status === 'maintenance'
+                  ? '#F59E0B'
+                  : '#94A3B8';
+              return (
+                <TouchableOpacity
+                  key={kiosk.id}
+                  style={[styles.kioskCard, isSelected && styles.kioskCardActive]}
+                  onPress={() => setSelectedKioskId(isSelected ? null : kiosk.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.kioskCardTop}>
+                    <View style={[styles.kioskStatusDot, { backgroundColor: statusColor }]} />
+                    <Text style={[styles.kioskCardStatus, { color: statusColor }]}>
+                      {kiosk.status.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={styles.kioskCardName} numberOfLines={2}>
+                    {kiosk.name}
+                  </Text>
+                  <Text style={styles.kioskCardLoc} numberOfLines={1}>
+                    {kiosk.city || kiosk.location}
+                  </Text>
+                  {/* Water bar */}
+                  <View style={styles.kioskMiniBarRow}>
+                    <Ionicons name="water-outline" size={10} color="#0284C7" />
+                    <View style={styles.kioskMiniTrack}>
+                      <View
+                        style={[
+                          styles.kioskMiniFill,
+                          {
+                            width: `${kiosk.waterLevelPercent}%`,
+                            backgroundColor: kiosk.waterLevelPercent < 20 ? '#EF4444' : '#0284C7',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.kioskMiniPct}>{kiosk.waterLevelPercent}%</Text>
+                  </View>
+                  {/* Soap bar */}
+                  <View style={styles.kioskMiniBarRow}>
+                    <Ionicons name="flask-outline" size={10} color="#8B5CF6" />
+                    <View style={styles.kioskMiniTrack}>
+                      <View
+                        style={[
+                          styles.kioskMiniFill,
+                          {
+                            width: `${kiosk.soapLevelPercent}%`,
+                            backgroundColor: kiosk.soapLevelPercent < 20 ? '#EF4444' : '#8B5CF6',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.kioskMiniPct}>{kiosk.soapLevelPercent}%</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
         {/* Dark Hero Card: Integrated from Payments Ledger Design */}
         <View style={styles.darkHeroCard}>
-          <Text style={styles.darkHeroLabel}>{"TODAY'S REVENUE PERFORMANCE"}</Text>
+          <Text style={styles.darkHeroLabel}>
+            {selectedKioskId
+              ? `${switcherLabel.toUpperCase()} — REVENUE`
+              : "TODAY'S REVENUE PERFORMANCE"}
+          </Text>
           <Text style={styles.darkHeroAmount}>
             {formatCurrency(stats?.todayRevenue)}
           </Text>
@@ -247,7 +394,10 @@ export default function DashboardScreen() {
             <View style={styles.breakdownItem}>
               <Text style={styles.breakdownLabel}>Active Cleaning Cycles</Text>
               <Text style={styles.breakdownVal}>
-                {stats?.activeCleansCount ?? 0} Running (Chamber 01)
+                {stats?.activeCleansCount ?? 0} Running
+                {fleetHealth && !selectedKioskId
+                  ? ` (${fleetHealth.busy} kiosk${fleetHealth.busy !== 1 ? 's' : ''})`
+                  : ' (Chamber 01)'}
               </Text>
             </View>
 
@@ -332,9 +482,11 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Recent Orders Section Header (Showing 6 orders) */}
+        {/* Recent Orders Section Header */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>RECENT ORDERS (6)</Text>
+          <Text style={styles.sectionTitle}>
+            {selectedKioskId ? `ORDERS — ${switcherLabel}` : 'RECENT ORDERS (6)'}
+          </Text>
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/transactions')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -346,10 +498,10 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Recent Orders List - max 6 */}
-        {recentSixOrders.length > 0 ? (
+        {/* Recent Orders List - max 6, filtered by selected kiosk */}
+        {filteredOrders.length > 0 ? (
           <>
-            {recentSixOrders.map((tx) => (
+            {filteredOrders.map((tx) => (
               <RecentTransactionCard
                 key={tx.id}
                 orderId={tx.orderId}
@@ -360,6 +512,7 @@ export default function DashboardScreen() {
                 paymentStatus={tx.paymentStatus}
                 cleaningStatus={tx.cleaningStatus}
                 createdAt={tx.createdAt}
+                kioskName={hasMultipleKiosks ? tx.kioskName : undefined}
                 onPress={() => router.push(`/(tabs)/transactions/${tx.orderId}` as any)}
               />
             ))}
@@ -381,7 +534,11 @@ export default function DashboardScreen() {
         ) : (
           <View style={styles.emptyCard}>
             <Ionicons name="receipt-outline" size={28} color="#94A3B8" />
-            <Text style={styles.emptyText}>No transactions recorded today.</Text>
+            <Text style={styles.emptyText}>
+              {selectedKioskId
+                ? 'No transactions for this kiosk yet.'
+                : 'No transactions recorded today.'}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -395,6 +552,75 @@ export default function DashboardScreen() {
         onClearAll={handleClearAll}
         onNotificationPress={handleNotificationPress}
       />
+
+      {/* Kiosk Switcher Modal */}
+      {hasMultipleKiosks && (
+        <Modal
+          visible={isSwitcherOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsSwitcherOpen(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setIsSwitcherOpen(false)}>
+            <View style={styles.switcherModal}>
+              <Text style={styles.switcherModalTitle}>SELECT KIOSK VIEW</Text>
+
+              {/* All Kiosks option */}
+              <TouchableOpacity
+                style={[
+                  styles.switcherOption,
+                  !selectedKioskId && styles.switcherOptionActive,
+                ]}
+                onPress={() => { setSelectedKioskId(null); setIsSwitcherOpen(false); }}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="layers-outline"
+                  size={18}
+                  color={!selectedKioskId ? '#FFFFFF' : '#0284C7'}
+                />
+                <View style={styles.switcherOptionText}>
+                  <Text style={[styles.switcherOptionName, !selectedKioskId && { color: '#FFFFFF' }]}>
+                    All Kiosks
+                  </Text>
+                  <Text style={[styles.switcherOptionSub, !selectedKioskId && { color: '#94A3B8' }]}>
+                    Aggregate view across {ownedKiosks.length} units
+                  </Text>
+                </View>
+                {!selectedKioskId && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+              </TouchableOpacity>
+
+              {ownedKiosks.map((kiosk) => {
+                const isActive = selectedKioskId === kiosk.id;
+                const statusColor =
+                  kiosk.status === 'online' ? '#10B981'
+                  : kiosk.status === 'busy' ? '#3B82F6'
+                  : kiosk.status === 'maintenance' ? '#F59E0B'
+                  : '#94A3B8';
+                return (
+                  <TouchableOpacity
+                    key={kiosk.id}
+                    style={[styles.switcherOption, isActive && styles.switcherOptionActive]}
+                    onPress={() => { setSelectedKioskId(kiosk.id); setIsSwitcherOpen(false); }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.switcherStatusDot, { backgroundColor: statusColor }]} />
+                    <View style={styles.switcherOptionText}>
+                      <Text style={[styles.switcherOptionName, isActive && { color: '#FFFFFF' }]} numberOfLines={1}>
+                        {kiosk.name}
+                      </Text>
+                      <Text style={[styles.switcherOptionSub, isActive && { color: '#94A3B8' }]} numberOfLines={1}>
+                        {kiosk.city || kiosk.location} • {kiosk.status}
+                      </Text>
+                    </View>
+                    {isActive && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -408,6 +634,101 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: 110, // Extra clearance for modern bottom capsule
   },
+  // ── Kiosk Switcher ──────────────────────────────────────────────────
+  switcherWrapper: {
+    marginBottom: Spacing.sm,
+  },
+  switcherPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.pill,
+    marginBottom: 8,
+  },
+  switcherLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    maxWidth: 200,
+  },
+  fleetHealthRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  healthChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  healthOnline: { backgroundColor: '#F0FDF4', borderColor: '#86EFAC' },
+  healthBusy: { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
+  healthMaint: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+  healthOffline: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+  healthDot: { width: 6, height: 6, borderRadius: 3 },
+  healthChipText: { fontSize: 11, fontWeight: '600', color: '#475569' },
+  // ── Kiosk Cards Carousel ────────────────────────────────────────────
+  kioskCardsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingRight: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  kioskCard: {
+    width: 170,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: BorderRadius.cardLarge,
+    padding: Spacing.md,
+    ...Shadows.small,
+  },
+  kioskCardActive: {
+    backgroundColor: '#121316',
+    borderColor: '#27272A',
+  },
+  kioskCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  kioskStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  kioskCardStatus: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+  kioskCardName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
+    lineHeight: 16,
+  },
+  kioskCardLoc: { fontSize: 10, color: '#64748B', marginBottom: 8 },
+  kioskMiniBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 4,
+  },
+  kioskMiniTrack: {
+    flex: 1,
+    height: 3,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  kioskMiniFill: { height: '100%', borderRadius: 2 },
+  kioskMiniPct: { fontSize: 9, fontWeight: '600', color: '#64748B', width: 24, textAlign: 'right' },
+  // ── Dark Hero Card ──────────────────────────────────────────────────
   darkHeroCard: {
     backgroundColor: '#121316',
     borderRadius: BorderRadius.cardLarge,
@@ -443,15 +764,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  breakdownLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  breakdownVal: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
+  breakdownLabel: { fontSize: 12, color: '#94A3B8' },
+  breakdownVal: { fontSize: 13, fontWeight: '700', color: '#F8FAFC' },
   heroPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -461,11 +775,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 6,
   },
-  heroPillBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
+  heroPillBtnText: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  // ── Quick Pills ──────────────────────────────────────────────────────
   quickPillsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -483,14 +794,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.pill,
     ...Shadows.small,
   },
-  quickPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  analyticsSection: {
-    marginBottom: Spacing.xs,
-  },
+  quickPillText: { fontSize: 11, fontWeight: '600', color: '#475569' },
+  // ── Analytics & Section Headers ──────────────────────────────────────
+  analyticsSection: { marginBottom: Spacing.xs },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -505,11 +811,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  viewAllText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
+  viewAllText: { fontSize: 12, color: Colors.primary, fontWeight: '600' },
+  // ── View More / Empty ────────────────────────────────────────────────
   viewMoreOrdersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -524,11 +827,7 @@ const styles = StyleSheet.create({
     gap: 6,
     ...Shadows.small,
   },
-  viewMoreOrdersText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
+  viewMoreOrdersText: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
   emptyCard: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -540,9 +839,40 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     ...Shadows.small,
   },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: Spacing.sm,
+  emptyText: { fontSize: 13, color: '#64748B', marginTop: Spacing.sm, textAlign: 'center' },
+  // ── Kiosk Switcher Modal ─────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
   },
+  switcherModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.cardLarge,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    ...Shadows.medium,
+  },
+  switcherModalTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
+  },
+  switcherOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.md,
+    marginBottom: 4,
+  },
+  switcherOptionActive: { backgroundColor: '#121316' },
+  switcherStatusDot: { width: 8, height: 8, borderRadius: 4 },
+  switcherOptionText: { flex: 1 },
+  switcherOptionName: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  switcherOptionSub: { fontSize: 11, color: '#64748B', marginTop: 1 },
 });

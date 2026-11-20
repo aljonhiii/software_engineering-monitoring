@@ -13,6 +13,7 @@ interface RecentTransactionCardProps {
   paymentStatus: string;
   cleaningStatus: string;
   createdAt: string;
+  kioskName?: string;
   onPress?: () => void;
 }
 
@@ -25,6 +26,7 @@ export function RecentTransactionCard({
   paymentStatus,
   cleaningStatus,
   createdAt,
+  kioskName,
   onPress,
 }: RecentTransactionCardProps) {
   return (
@@ -42,6 +44,14 @@ export function RecentTransactionCard({
         <Text style={styles.shoeServiceText} numberOfLines={1}>
           {shoeType} <Text style={styles.serviceText}>• {serviceName}</Text>
         </Text>
+        {/* Kiosk badge — shown when owner has multiple kiosks */}
+        {!!kioskName && (
+          <View style={styles.kioskBadge}>
+            <Text style={styles.kioskBadgeText} numberOfLines={1}>
+              {kioskName}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.rightCol}>
@@ -97,6 +107,22 @@ const styles = StyleSheet.create({
   serviceText: {
     color: '#64748B',
     fontWeight: '400',
+  },
+  kioskBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  kioskBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#1D4ED8',
+    letterSpacing: 0.1,
   },
   rightCol: {
     alignItems: 'flex-end',

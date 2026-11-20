@@ -71,11 +71,18 @@ export async function getDashboardStats(req, res) {
     const completedCleaning = allTransactions.filter((t) => t.cleaning_status === 'completed').length;
     const activeCleaning = allTransactions.filter((t) => t.cleaning_status === 'in_progress').length;
 
-    // Recent transactions
+    // Build kiosk name lookup
+    const kioskNameMap = {};
+    for (const k of kiosks) {
+      kioskNameMap[k.id] = k.name;
+    }
+
+    // Recent transactions — include kioskName for fleet badge display
     const recentTransactions = allTransactions.slice(0, 6).map((t) => ({
       id: t.id,
       orderId: t.order_id,
       kioskId: t.kiosk_id,
+      kioskName: kioskNameMap[t.kiosk_id] || t.kiosk_id,
       shoeType: normalizeShoeType(t.shoe_type),
       serviceName: normalizeServiceName(t.service_name, t.service_tier),
       totalAmount: Number(t.total_amount),
@@ -102,6 +109,25 @@ export async function getDashboardStats(req, res) {
       };
     });
 
+    // Fleet health summary across all owner's kiosks
+    const fleetOnline = kiosks.filter((k) => k.status === 'online').length;
+    const fleetBusy = kiosks.filter((k) => k.status === 'busy').length;
+    const fleetMaintenance = kiosks.filter((k) => k.status === 'maintenance').length;
+    const fleetOffline = kiosks.filter((k) => k.status === 'offline').length;
+
+    // Fleet kiosk summaries for the mobile kiosk switcher / cards carousel
+    const ownedKiosks = kiosks.map((k) => ({
+      id: k.id,
+      name: k.name,
+      location: k.location || k.address || '',
+      city: k.city || '',
+      status: k.status || 'online',
+      waterLevelPercent: k.water_level_pct ?? 100,
+      soapLevelPercent: k.soap_level_pct ?? 100,
+      doorLocked: Boolean(k.door_locked),
+      currentActivity: k.current_activity || 'Idle',
+    }));
+
     res.json({
       success: true,
       stats: {
@@ -126,6 +152,15 @@ export async function getDashboardStats(req, res) {
         lastHeartbeat: primaryKiosk ? primaryKiosk.last_heartbeat : null,
         recentTransactions,
         activities: activities.slice(0, 6),
+        // Multi-kiosk fleet data
+        ownedKiosks,
+        fleetHealth: {
+          online: fleetOnline,
+          busy: fleetBusy,
+          maintenance: fleetMaintenance,
+          offline: fleetOffline,
+          total: kiosks.length,
+        },
       },
     });
   } catch (err) {
