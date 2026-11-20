@@ -671,6 +671,8 @@ export async function createAdminBuyer(req, res) {
       dedicatedKioskName,
       dedicatedKioskCity,
       dedicatedKioskAddress,
+      kioskCount = 1,
+      dedicatedKiosks = [],
     } = req.body;
 
     if (!fullName || !email) {
@@ -714,60 +716,92 @@ export async function createAdminBuyer(req, res) {
     const tokenHash = hashInviteToken(rawInviteToken);
     const expiresAtDate = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 days
 
-    // Dedicated Kiosk Provisioning for this Owner
-    let provisionedKiosk = null;
+    // Dedicated Kiosk(s) Provisioning for this Owner (supports 1, 2, or more kiosks)
+    const provisionedKiosks = [];
     const requestedKioskIds = Array.isArray(kioskIds) ? [...kioskIds.filter(Boolean)] : [];
+
+    const numToProvision = Math.max(
+      1,
+      Number(kioskCount) || (Array.isArray(dedicatedKiosks) && dedicatedKiosks.length > 0 ? dedicatedKiosks.length : 1)
+    );
 
     const shouldCreateDedicated = Boolean(
       createDedicatedKiosk === true ||
       createDedicatedKiosk === 'true' ||
       dedicatedKioskId ||
-      dedicatedKioskName
+      dedicatedKioskName ||
+      (Array.isArray(dedicatedKiosks) && dedicatedKiosks.length > 0) ||
+      Number(kioskCount) > 1
     );
 
     if (shouldCreateDedicated) {
-      let targetKioskId =
-        (dedicatedKioskId && String(dedicatedKioskId).trim().toUpperCase()) ||
-        `KIOSK-${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '')}-01`;
+      const cleanBaseUsername = cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-      let counter = 1;
-      while (kiosks.some((k) => k.id.toLowerCase() === targetKioskId.toLowerCase())) {
-        counter++;
-        targetKioskId = `KIOSK-${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '')}-0${counter}`;
-      }
+      for (let i = 1; i <= numToProvision; i++) {
+        const itemConfig = Array.isArray(dedicatedKiosks) && dedicatedKiosks[i - 1] ? dedicatedKiosks[i - 1] : {};
+        const suffix = String(i).padStart(2, '0');
 
-      const targetKioskName =
-        (dedicatedKioskName && String(dedicatedKioskName).trim()) ||
-        `KixCleen Vendo — ${String(fullName).trim()} Branch`;
-      const targetCity = (dedicatedKioskCity && String(dedicatedKioskCity).trim()) || 'Zamboanga City';
-      const targetAddress =
-        (dedicatedKioskAddress && String(dedicatedKioskAddress).trim()) || 'Main Commercial Station';
+        let targetKioskId =
+          (itemConfig.id && String(itemConfig.id).trim().toUpperCase()) ||
+          (i === 1 && dedicatedKioskId && String(dedicatedKioskId).trim().toUpperCase()) ||
+          `KIOSK-${cleanBaseUsername}-${suffix}`;
 
-      provisionedKiosk = {
-        id: targetKioskId,
-        name: targetKioskName,
-        city: targetCity,
-        address: targetAddress,
-        location: targetAddress,
-        status: 'online',
-        is_active: 1,
-        is_public: 1,
-        operating_hours: '8:00 AM - 10:00 PM Daily',
-        services_offered: 'Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer',
-        door_locked: 0,
-        water_level_pct: 100,
-        soap_level_pct: 100,
-        current_activity: 'Idle - Ready for customer',
-      };
+        let counter = i;
+        while (
+          kiosks.some((k) => k.id.toLowerCase() === targetKioskId.toLowerCase()) ||
+          provisionedKiosks.some((k) => k.id.toLowerCase() === targetKioskId.toLowerCase())
+        ) {
+          counter++;
+          targetKioskId = `KIOSK-${cleanBaseUsername}-${String(counter).padStart(2, '0')}`;
+        }
 
-      if (!requestedKioskIds.includes(targetKioskId)) {
-        requestedKioskIds.push(targetKioskId);
+        const branchSuffix = numToProvision > 1 ? ` — Station ${i}` : ' Branch';
+        const targetKioskName =
+          (itemConfig.name && String(itemConfig.name).trim()) ||
+          (i === 1 && dedicatedKioskName && String(dedicatedKioskName).trim()) ||
+          `KixCleen Vendo — ${String(fullName).trim()}${branchSuffix}`;
+
+        const targetCity =
+          (itemConfig.city && String(itemConfig.city).trim()) ||
+          (dedicatedKioskCity && String(dedicatedKioskCity).trim()) ||
+          'Zamboanga City';
+
+        const targetAddress =
+          (itemConfig.address && String(itemConfig.address).trim()) ||
+          (dedicatedKioskAddress && String(dedicatedKioskAddress).trim()) ||
+          `Commercial Station ${i}`;
+
+        const newKioskRecord = {
+          id: targetKioskId,
+          name: targetKioskName,
+          city: targetCity,
+          address: targetAddress,
+          location: targetAddress,
+          status: 'online',
+          is_active: 1,
+          is_public: 1,
+          operating_hours: '8:00 AM - 10:00 PM Daily',
+          services_offered: 'Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer',
+          door_locked: 0,
+          water_level_pct: 100,
+          soap_level_pct: 100,
+          current_activity: 'Idle - Ready for customer',
+        };
+
+        provisionedKiosks.push(newKioskRecord);
+
+        if (!requestedKioskIds.includes(targetKioskId)) {
+          requestedKioskIds.push(targetKioskId);
+        }
       }
     }
 
+    // Primary provisioned kiosk for legacy single-kiosk response compatibility
+    const provisionedKiosk = provisionedKiosks[0] || null;
+
     // Validate any other requested kiosk assignments if provided
     for (const kId of requestedKioskIds) {
-      if (provisionedKiosk && kId === provisionedKiosk.id) continue;
+      if (provisionedKiosks.some((pk) => pk.id === kId)) continue;
       const kExists = kiosks.some((k) => k.id === kId);
       if (!kExists) {
         return res.status(404).json({
@@ -802,19 +836,20 @@ export async function createAdminBuyer(req, res) {
         ]
       );
 
-      if (provisionedKiosk) {
+      for (const pk of provisionedKiosks) {
         await db.query(
           `INSERT INTO kiosks 
            (id, name, address, city, location, latitude, longitude, status, is_active, is_public, operating_hours, services_offered, door_locked, water_level_pct, soap_level_pct, current_activity, last_heartbeat)
-           VALUES (?, ?, ?, ?, ?, NULL, NULL, 'online', TRUE, TRUE, ?, ?, FALSE, 100, 100, 'Idle - Ready for customer', NOW())`,
+           VALUES (?, ?, ?, ?, ?, NULL, NULL, 'online', TRUE, TRUE, ?, ?, FALSE, 100, 100, 'Idle - Ready for customer', NOW())
+           ON DUPLICATE KEY UPDATE name=VALUES(name), address=VALUES(address), city=VALUES(city)`,
           [
-            provisionedKiosk.id,
-            provisionedKiosk.name,
-            provisionedKiosk.address,
-            provisionedKiosk.city,
-            provisionedKiosk.location,
-            provisionedKiosk.operating_hours,
-            provisionedKiosk.services_offered,
+            pk.id,
+            pk.name,
+            pk.address,
+            pk.city,
+            pk.location,
+            pk.operating_hours,
+            pk.services_offered,
           ]
         );
 
@@ -822,7 +857,7 @@ export async function createAdminBuyer(req, res) {
           `INSERT INTO machine_status (kiosk_id, status, door_locked, water_level_pct, soap_level_pct, current_activity, last_heartbeat)
            VALUES (?, 'online', FALSE, 100, 100, 'Idle - Ready for customer', NOW())
            ON DUPLICATE KEY UPDATE status = 'online'`,
-          [provisionedKiosk.id]
+          [pk.id]
         );
       }
 
@@ -853,9 +888,9 @@ export async function createAdminBuyer(req, res) {
         updated_at: nowIso,
       });
 
-      if (provisionedKiosk) {
+      for (const pk of provisionedKiosks) {
         memoryStore.kiosks.push({
-          ...provisionedKiosk,
+          ...pk,
           latitude: null,
           longitude: null,
           last_heartbeat: nowIso,
@@ -864,7 +899,7 @@ export async function createAdminBuyer(req, res) {
         });
 
         memoryStore.machine_status.push({
-          kiosk_id: provisionedKiosk.id,
+          kiosk_id: pk.id,
           status: 'online',
           door_locked: 0,
           water_level_pct: 100,
@@ -906,6 +941,11 @@ export async function createAdminBuyer(req, res) {
       provisionedKiosk?.id || requestedKioskIds[0]
     );
 
+    // Resolve details of all assigned kiosks for the email
+    const assignedKiosksDetails = updatedData.kiosks.filter((k) =>
+      requestedKioskIds.includes(k.id)
+    );
+
     // Dispatch setup invitation email
     const emailResult = await sendBuyerInvitationEmail({
       to: cleanEmail,
@@ -913,14 +953,20 @@ export async function createAdminBuyer(req, res) {
       username: cleanUsername,
       setupUrl: fullSetupUrl,
       dedicatedKiosk: provisionedKiosk,
+      assignedKiosks: assignedKiosksDetails,
       expiresAt: expiresAtDate.toISOString(),
     });
+
+    const kioskSummaryLabel =
+      requestedKioskIds.length > 1
+        ? `${requestedKioskIds.length} kiosks (${requestedKioskIds.join(', ')})`
+        : provisionedKiosk?.id || requestedKioskIds[0] || 'assigned';
 
     res.status(201).json({
       success: true,
       message: emailResult.sent
-        ? `Owner account created for ${fullName}. Invitation email sent to ${cleanEmail}.`
-        : `Owner account created for ${fullName} with dedicated kiosk ${provisionedKiosk?.id || requestedKioskIds[0] || 'assigned'}.`,
+        ? `Owner account created for ${fullName} with ${kioskSummaryLabel}. Invitation email sent to ${cleanEmail}.`
+        : `Owner account created for ${fullName} with ${kioskSummaryLabel}.`,
       buyer: formatAdminBuyer(createdBuyer, updatedData.owners, updatedData.kiosks),
       dedicatedKiosk: provisionedKiosk
         ? {
@@ -931,6 +977,13 @@ export async function createAdminBuyer(req, res) {
             launcherUrl,
           }
         : null,
+      provisionedKiosks: provisionedKiosks.map((k) => ({
+        id: k.id,
+        name: k.name,
+        city: k.city,
+        address: k.address,
+        launcherUrl: getDynamicLauncherUrl(k.id),
+      })),
       launcherUrl,
       emailResult,
       invitation: {
@@ -952,9 +1005,9 @@ export async function createAdminBuyer(req, res) {
 export async function updateAdminBuyer(req, res) {
   try {
     const { id } = req.params;
-    const { fullName, email, username, phone, companyName } = req.body;
+    const { fullName, email, username, phone, companyName, kioskIds } = req.body;
 
-    const { db, users } = await fetchAllDataForAdmin();
+    const { db, users, kiosks, owners } = await fetchAllDataForAdmin();
     const target = users.find((u) => u.id === id);
 
     if (!target) {
@@ -985,6 +1038,28 @@ export async function updateAdminBuyer(req, res) {
         'UPDATE users SET full_name = ?, email = ?, username = ?, phone = ?, company_name = ? WHERE id = ?',
         [nextFullName, nextEmail, nextUsername, nextPhone || null, nextCompany || null, id]
       );
+
+      // Synchronize kiosk assignments if kioskIds was passed
+      if (Array.isArray(kioskIds)) {
+        const cleanKioskIds = kioskIds.filter(Boolean);
+        // Remove kiosks previously assigned to this buyer that are not in cleanKioskIds
+        if (cleanKioskIds.length === 0) {
+          await db.query('DELETE FROM kiosk_owners WHERE buyer_id = ?', [id]);
+        } else {
+          await db.query(
+            'DELETE FROM kiosk_owners WHERE buyer_id = ? AND kiosk_id NOT IN (?)',
+            [id, cleanKioskIds]
+          );
+          for (const kId of cleanKioskIds) {
+            await db.query(
+              `INSERT INTO kiosk_owners (kiosk_id, buyer_id, assigned_by, notes)
+               VALUES (?, ?, ?, 'Distributed via buyer management')
+               ON DUPLICATE KEY UPDATE buyer_id = VALUES(buyer_id), assigned_by = VALUES(assigned_by), assigned_at = NOW()`,
+              [kId, id, req.user?.id || 'USR-000-SUPERADMIN']
+            );
+          }
+        }
+      }
     } else {
       target.full_name = nextFullName;
       target.email = nextEmail;
@@ -992,6 +1067,33 @@ export async function updateAdminBuyer(req, res) {
       target.phone = nextPhone || null;
       target.company_name = nextCompany || null;
       target.updated_at = new Date().toISOString();
+
+      if (Array.isArray(kioskIds)) {
+        const cleanKioskIds = kioskIds.filter(Boolean);
+        // Remove kiosks previously assigned to this buyer that are not in cleanKioskIds
+        memoryStore.kiosk_owners = memoryStore.kiosk_owners.filter(
+          (ko) => ko.buyer_id !== id || cleanKioskIds.includes(ko.kiosk_id)
+        );
+        // Add or update
+        for (const kId of cleanKioskIds) {
+          const existing = memoryStore.kiosk_owners.find((ko) => ko.kiosk_id === kId);
+          if (existing) {
+            existing.buyer_id = id;
+            existing.assigned_by = req.user?.id || 'USR-000-SUPERADMIN';
+            existing.assigned_at = new Date().toISOString();
+          } else {
+            memoryStore.kiosk_owners.push({
+              id: Date.now() + Math.floor(Math.random() * 1000),
+              kiosk_id: kId,
+              buyer_id: id,
+              assigned_by: req.user?.id || 'USR-000-SUPERADMIN',
+              notes: 'Distributed via buyer management',
+              assigned_at: new Date().toISOString(),
+            });
+          }
+        }
+        saveMemoryStore();
+      }
     }
 
     const refreshed = await fetchAllDataForAdmin();
@@ -999,7 +1101,7 @@ export async function updateAdminBuyer(req, res) {
 
     res.json({
       success: true,
-      message: 'Buyer information updated.',
+      message: 'Buyer information and kiosk distribution updated.',
       buyer: formatAdminBuyer(updatedUser, refreshed.owners, refreshed.kiosks),
     });
   } catch (err) {

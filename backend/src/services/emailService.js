@@ -107,25 +107,36 @@ function escapeHtml(str) {
 /**
  * Generate responsive HTML email for buyer account activation.
  */
-function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, expiresAt }) {
+function buildInvitationHtml({ fullName, username, setupUrl, dedicatedKiosk, assignedKiosks, expiresAt }) {
   const safeFullName = escapeHtml(fullName);
   const safeUsername = escapeHtml(username);
-  const safeKioskId = dedicatedKiosk ? escapeHtml(dedicatedKiosk.id) : '';
-  const safeKioskName = dedicatedKiosk ? escapeHtml(dedicatedKiosk.name || 'Dedicated KixCleen Machine') : '';
-  const safeKioskCity = dedicatedKiosk ? escapeHtml(dedicatedKiosk.city || 'Zamboanga City') : '';
 
-  const kioskSnippet = dedicatedKiosk
+  const kiosksList = Array.isArray(assignedKiosks) && assignedKiosks.length > 0
+    ? assignedKiosks
+    : dedicatedKiosk
+    ? [dedicatedKiosk]
+    : [];
+
+  const kioskSnippet = kiosksList.length > 0
     ? `
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
-        <p style="margin: 0 0 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">
-          Assigned Dedicated Kiosk
+        <p style="margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">
+          Assigned Kiosk Terminal${kiosksList.length > 1 ? `s (${kiosksList.length})` : ''}
         </p>
-        <p style="margin: 0; font-family: monospace; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${safeKioskId}
-        </p>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">
-          ${safeKioskName} &bull; ${safeKioskCity}
-        </p>
+        ${kiosksList
+          .map(
+            (k) => `
+          <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: ${kiosksList.length > 1 ? '1px solid #e2e8f0' : 'none'};">
+            <p style="margin: 0; font-family: monospace; font-size: 14px; font-weight: 700; color: #0f172a;">
+              ${escapeHtml(k.id || '')}
+            </p>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #475569;">
+              ${escapeHtml(k.name || 'Dedicated KixCleen Machine')} &bull; ${escapeHtml(k.city || 'Zamboanga City')}
+            </p>
+          </div>
+        `
+          )
+          .join('')}
       </div>
     `
     : '';
@@ -227,6 +238,7 @@ export async function sendBuyerInvitationEmail({
   username,
   setupUrl,
   dedicatedKiosk = null,
+  assignedKiosks = null,
   expiresAt = null,
 }) {
   const cleanTo = String(to).trim();
@@ -237,6 +249,16 @@ export async function sendBuyerInvitationEmail({
     from = `"KixCleen Platform" <${user}>`;
   }
 
+  const kiosksList = Array.isArray(assignedKiosks) && assignedKiosks.length > 0
+    ? assignedKiosks
+    : dedicatedKiosk
+    ? [dedicatedKiosk]
+    : [];
+
+  const kioskSummaryStr = kiosksList.length > 0
+    ? kiosksList.map((k) => `${k.id} (${k.name || 'Dedicated Kiosk'})`).join(', ')
+    : 'None';
+
   if (!transporter) {
     // Development / Safe fallback mode when SMTP credentials are not yet set
     console.log('\n================================================================');
@@ -244,7 +266,7 @@ export async function sendBuyerInvitationEmail({
     console.log('To:         ', cleanTo);
     console.log('Name:       ', fullName);
     console.log('Subject:    ', 'Activate Your KixCleen Account — Dedicated Kiosk Setup');
-    console.log('Kiosk:      ', dedicatedKiosk ? `${dedicatedKiosk.id} (${dedicatedKiosk.name})` : 'None');
+    console.log('Kiosks:     ', kioskSummaryStr);
     console.log('Setup Link: ', setupUrl);
     console.log('💡 Note:     Configure SMTP_USER and SMTP_PASS in backend/.env to send real emails.');
     console.log('================================================================\n');
@@ -263,6 +285,7 @@ export async function sendBuyerInvitationEmail({
       username,
       setupUrl,
       dedicatedKiosk,
+      assignedKiosks: kiosksList,
       expiresAt,
     });
 
@@ -271,7 +294,7 @@ Welcome to KixCleen, ${fullName}!
 
 An account has been created for you on the KixCleen Platform.
 Username: ${username}
-${dedicatedKiosk ? `Assigned Kiosk: ${dedicatedKiosk.id} (${dedicatedKiosk.name})` : ''}
+${kiosksList.length > 0 ? `Assigned Kiosks (${kiosksList.length}):\n${kiosksList.map((k) => ` - ${k.id} (${k.name || 'Dedicated Kiosk'})`).join('\n')}` : ''}
 
 Activate your account and set your password by visiting the link below:
 ${setupUrl}
