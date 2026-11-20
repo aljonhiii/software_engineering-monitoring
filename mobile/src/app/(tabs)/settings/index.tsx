@@ -146,32 +146,57 @@ export default function SettingsScreen() {
                   : kiosk.status === 'maintenance'
                   ? '#F59E0B'
                   : '#94A3B8';
+              const statusBg =
+                kiosk.status === 'online'
+                  ? '#F0FDF4'
+                  : kiosk.status === 'busy'
+                  ? '#EFF6FF'
+                  : kiosk.status === 'maintenance'
+                  ? '#FFFBEB'
+                  : '#F8FAFC';
+              const statusBorder =
+                kiosk.status === 'online'
+                  ? '#BBF7D0'
+                  : kiosk.status === 'busy'
+                  ? '#BFDBFE'
+                  : kiosk.status === 'maintenance'
+                  ? '#FDE68A'
+                  : '#E2E8F0';
 
               return (
-                <View key={kiosk.id}>
+                <View key={kiosk.id} style={styles.kioskItemBlock}>
                   {idx > 0 && <View style={styles.divider} />}
-                  <View style={styles.kioskRow}>
-                    <View style={styles.kioskInfoCol}>
-                      <View style={styles.kioskHeaderLine}>
-                        <Text style={styles.kioskTitle} numberOfLines={1}>
-                          {kiosk.name}
-                        </Text>
+                  <View style={styles.kioskCardContent}>
+                    {/* Top Row: Machine Name + Status Badge Pill */}
+                    <View style={styles.kioskTopRow}>
+                      <Text style={styles.kioskTitle} numberOfLines={1}>
+                        {kiosk.name}
+                      </Text>
+                      <View style={[styles.statusBadgePill, { backgroundColor: statusBg, borderColor: statusBorder }]}>
                         <View style={[styles.statusBadgeDot, { backgroundColor: statusColor }]} />
                         <Text style={[styles.kioskStatusText, { color: statusColor }]}>
                           {kiosk.status.toUpperCase()}
                         </Text>
                       </View>
+                    </View>
+
+                    {/* Metadata line: Terminal ID and City/Location */}
+                    <View style={styles.kioskMetaRow}>
                       <Text style={styles.kioskTerminalId}>Terminal: {kiosk.id}</Text>
+                      <Text style={styles.kioskMetaDot}>•</Text>
                       <Text style={styles.kioskLocText} numberOfLines={1}>
                         {kiosk.city || kiosk.location || 'Hub Location'}
                       </Text>
                     </View>
+
+                    {/* Dedicated Action Button Row */}
                     <TouchableOpacity
                       style={styles.viewTxBtn}
                       onPress={() => router.push(`/(tabs)/transactions?kioskId=${kiosk.id}` as any)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.viewTxBtnText}>Transactions</Text>
+                      <Ionicons name="receipt-outline" size={13} color="#475569" />
+                      <Text style={styles.viewTxBtnText}>View Transactions</Text>
                       <Ionicons name="arrow-forward" size={12} color="#475569" />
                     </TouchableOpacity>
                   </View>
@@ -416,27 +441,33 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.cardLarge,
     ...Shadows.small,
   },
-  // Kiosk Fleet Row Styles
-  kioskRow: {
+  // Kiosk Fleet Item Styles (Non-overlapping card content)
+  kioskItemBlock: {
+    paddingVertical: 4,
+  },
+  kioskCardContent: {
+    gap: 5,
+  },
+  kioskTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
-  },
-  kioskInfoCol: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  kioskHeaderLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    gap: 8,
   },
   kioskTitle: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  statusBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
   },
   statusBadgeDot: {
     width: 6,
@@ -444,30 +475,42 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   kioskStatusText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+  },
+  kioskMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   kioskTerminalId: {
     fontFamily: 'monospace',
     fontSize: 11,
     color: '#64748B',
-    marginBottom: 2,
+  },
+  kioskMetaDot: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
   kioskLocText: {
+    flex: 1,
     fontSize: 11,
     color: '#94A3B8',
   },
   viewTxBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    alignSelf: 'flex-start',
+    gap: 5,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: BorderRadius.pill,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
+    marginTop: 4,
+    ...Shadows.small,
   },
   viewTxBtnText: {
     fontSize: 11,

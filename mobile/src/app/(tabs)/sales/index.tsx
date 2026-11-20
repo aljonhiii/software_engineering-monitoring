@@ -106,10 +106,12 @@ export default function SalesScreen() {
               onPress={() => setIsKioskPickerOpen(true)}
               activeOpacity={0.7}
             >
-              <Ionicons name="storefront-outline" size={14} color="#475569" />
-              <Text style={styles.kioskDropdownLabel} numberOfLines={1}>
-                {selectedKioskName}
-              </Text>
+              <View style={styles.kioskDropdownLeft}>
+                <Ionicons name="storefront-outline" size={14} color="#475569" />
+                <Text style={styles.kioskDropdownLabel} numberOfLines={1} ellipsizeMode="tail">
+                  {selectedKioskName}
+                </Text>
+              </View>
               <Ionicons name="chevron-down" size={14} color="#64748B" />
             </TouchableOpacity>
             {selectedKioskId && (
@@ -117,8 +119,10 @@ export default function SalesScreen() {
                 style={styles.clearKioskFilterBtn}
                 onPress={() => setSelectedKioskId(null)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
               >
-                <Text style={styles.clearKioskFilterText}>Reset to All</Text>
+                <Ionicons name="close-circle" size={13} color="#64748B" />
+                <Text style={styles.clearKioskFilterText}>All</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -345,30 +349,47 @@ const styles = StyleSheet.create({
   kioskFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+    width: '100%',
     marginBottom: Spacing.sm,
   },
   kioskDropdownBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: BorderRadius.pill,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    maxWidth: '75%',
+    height: 40,
     ...Shadows.small,
   },
+  kioskDropdownLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginRight: 6,
+  },
   kioskDropdownLabel: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '600',
     color: '#0F172A',
   },
   clearKioskFilterBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: 10,
+    height: 40,
+    ...Shadows.small,
   },
   clearKioskFilterText: {
     fontSize: 11,
