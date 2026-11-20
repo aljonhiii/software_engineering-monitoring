@@ -514,7 +514,8 @@
       "invite_token_hash": "81f451c0340979e33e67a53f807dd012852c75f6d649df48332f340986034554",
       "invite_expires_at": "2026-11-20T10:29:46.807Z",
       "created_at": "2026-11-13T10:09:14.715Z",
-      "updated_at": "2026-11-13T10:29:46.807Z"
+      "updated_at": "2026-11-20T17:22:53.503Z",
+      "onboarding_completed": 1
     },
     {
       "id": "USR-BUYER-117065",
@@ -958,22 +959,22 @@
       "id": "KIOSK-TEST-01",
       "name": "KixCleen Vendo — Test Branch",
       "city": "Zamboanga City",
-      "address": "TEST",
-      "location": "TEST",
+      "address": "Detected Current Position",
+      "location": "Detected Current Position, Brgy. Canelar",
       "status": "online",
       "is_active": 1,
       "is_public": 1,
       "operating_hours": "8:00 AM - 10:00 PM Daily",
       "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
       "door_locked": 0,
-      "water_level_pct": 90,
-      "soap_level_pct": 94,
+      "water_level_pct": 87,
+      "soap_level_pct": 92,
       "current_activity": "Idle - Ready for customer",
-      "latitude": null,
-      "longitude": null,
-      "last_heartbeat": "2026-11-13T10:30:13.386Z",
+      "latitude": 6.9216398,
+      "longitude": 122.0810253,
+      "last_heartbeat": "2026-11-20T17:18:08.425Z",
       "created_at": "2026-11-13T10:09:14.715Z",
-      "updated_at": "2026-11-13T10:30:13.386Z",
+      "updated_at": "2026-11-20T17:18:08.425Z",
       "current_order_id": null
     },
     {
@@ -1664,10 +1665,10 @@
     {
       "id": 1,
       "kiosk_id": "KIOSK-01-MAIN",
-      "buyer_id": "USR-SAMPLE-BUYER",
+      "buyer_id": "USR-BUYER-554715",
       "assigned_by": "USR-000-SUPERADMIN",
       "notes": "Primary flagship kiosk unit assigned to Sample Owner",
-      "assigned_at": "2026-10-28T17:49:54.310Z"
+      "assigned_at": "2026-11-20T17:22:53.503Z"
     },
     {
       "id": 2,
@@ -1755,7 +1756,7 @@
       "buyer_id": "USR-BUYER-554715",
       "assigned_by": "USR-000-SUPERADMIN",
       "notes": "Dedicated kiosk assigned on owner onboarding",
-      "assigned_at": "2026-11-13T10:09:14.715Z"
+      "assigned_at": "2026-11-20T17:22:53.503Z"
     },
     {
       "id": 1794564957678,
@@ -2139,13 +2140,13 @@
       "kiosk_id": "KIOSK-TEST-01",
       "status": "online",
       "door_locked": 0,
-      "water_level_pct": 90,
-      "soap_level_pct": 94,
+      "water_level_pct": 87,
+      "soap_level_pct": 92,
       "current_order_id": null,
       "current_activity": "Idle - Ready for customer",
       "error_code": null,
-      "last_heartbeat": "2026-11-13T10:30:13.386Z",
-      "updated_at": "2026-11-13T10:30:13.386Z"
+      "last_heartbeat": "2026-11-20T17:18:08.425Z",
+      "updated_at": "2026-11-20T17:18:08.425Z"
     },
     {
       "kiosk_id": "KIOSK-OWNER2267-01",
@@ -2533,6 +2534,63 @@
     }
   ],
   "transactions": [
+    {
+      "id": "TX-1795195078863",
+      "order_id": "KIX-20261120-7092",
+      "kiosk_id": "KIOSK-TEST-01",
+      "shoe_type": "Leather Shoes",
+      "service_tier": "disinfection",
+      "service_name": "Disinfection",
+      "addons": "[]",
+      "base_price": 50,
+      "addons_price": 0,
+      "total_amount": 50,
+      "payment_method": "bills",
+      "payment_status": "paid",
+      "payment_ref": "KIX-20261120-5986",
+      "cleaning_status": "completed",
+      "started_at": "2026-11-20T17:17:58.869Z",
+      "completed_at": "2026-11-20T17:18:02.314Z",
+      "created_at": "2026-11-20T17:17:58.869Z"
+    },
+    {
+      "id": "TX-1795195064239",
+      "order_id": "KIX-20261120-2453",
+      "kiosk_id": "KIOSK-TEST-01",
+      "shoe_type": "Other Shoes",
+      "service_tier": "deodorize",
+      "service_name": "Deodorize",
+      "addons": "[{\"id\":\"uv-bacterial\",\"name\":\"UV Light Bacterial Removal\",\"price\":25}]",
+      "base_price": 40,
+      "addons_price": 25,
+      "total_amount": 65,
+      "payment_method": "bills",
+      "payment_status": "paid",
+      "payment_ref": "KIX-20261120-8124",
+      "cleaning_status": "completed",
+      "started_at": "2026-11-20T17:17:44.241Z",
+      "completed_at": "2026-11-20T17:17:47.064Z",
+      "created_at": "2026-11-20T17:17:44.241Z"
+    },
+    {
+      "id": "TX-1795195021466",
+      "order_id": "KIX-20261120-9043",
+      "kiosk_id": "KIOSK-TEST-01",
+      "shoe_type": "Other Shoes",
+      "service_tier": "disinfection",
+      "service_name": "Disinfection",
+      "addons": "[{\"id\":\"uv-bacterial\",\"name\":\"UV Light Bacterial Removal\",\"price\":25}]",
+      "base_price": 50,
+      "addons_price": 25,
+      "total_amount": 75,
+      "payment_method": "bills",
+      "payment_status": "paid",
+      "payment_ref": "KIX-20261120-1535",
+      "cleaning_status": "completed",
+      "started_at": "2026-11-20T17:17:01.470Z",
+      "completed_at": "2026-11-20T17:17:10.699Z",
+      "created_at": "2026-11-20T17:17:01.470Z"
+    },
     {
       "id": "TX-1795186651612",
       "order_id": "KIX-20261120-3468",

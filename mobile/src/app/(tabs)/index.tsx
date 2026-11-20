@@ -23,7 +23,6 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { LoadingView } from '../../components/common/LoadingView';
 import { SalesBarChart } from '../../components/sales/SalesBarChart';
 import { RecentTransactionCard } from '../../components/dashboard/RecentTransactionCard';
-import { NotificationsModal, NotificationItem } from '../../components/common/NotificationsModal';
 import { DigitalReceiptModal } from '../../components/common/DigitalReceiptModal';
 
 export default function DashboardScreen() {
@@ -35,7 +34,6 @@ export default function DashboardScreen() {
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
 
   // Kiosk switcher state
   const [selectedKioskId, setSelectedKioskId] = useState<string | null>(null); // null = All Kiosks
@@ -43,41 +41,6 @@ export default function DashboardScreen() {
   const [persistedKiosks, setPersistedKiosks] = useState<KioskSummary[]>([]);
   const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
 
-  // Dynamic system notifications
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      title: 'Order Paid & Verified',
-      message: 'Order #KIX-20261109-1001 paid ₱150.00 via GCASH for Deep Clean.',
-      timestamp: '59m ago',
-      type: 'order',
-      isRead: false,
-    },
-    {
-      id: 'notif-2',
-      title: 'Quick Wash Complete',
-      message: 'Order #KIX-20261109-1002 cycle finished. Customer collection ready.',
-      timestamp: '39m ago',
-      type: 'order',
-      isRead: false,
-    },
-    {
-      id: 'notif-3',
-      title: 'Hardware Telemetry Active',
-      message: 'ESP32 controller heartbeat verified for Chamber 01.',
-      timestamp: '2h ago',
-      type: 'telemetry',
-      isRead: true,
-    },
-    {
-      id: 'notif-4',
-      title: 'Reservoirs Nominal',
-      message: 'Clean water is at 88% and detergent foam is at 92%.',
-      timestamp: '2h ago',
-      type: 'system',
-      isRead: true,
-    },
-  ]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -124,23 +87,6 @@ export default function DashboardScreen() {
 
       console.log('[Dashboard] Live order received for assigned kiosk:', tx.order_id || tx.orderId);
       fetchStats();
-
-      // Automatically add new order notification
-      const orderId = tx.order_id || tx.orderId || 'NEW';
-      const amount = tx.total_amount || tx.totalAmount || 0;
-      const method = (tx.payment_method || tx.paymentMethod || 'CASH').toUpperCase();
-
-      setNotifications((prev) => [
-        {
-          id: `notif-${Date.now()}`,
-          title: 'New Verified Order',
-          message: `Order #${orderId} paid ₱${amount} via ${method}.`,
-          timestamp: 'Just now',
-          type: 'order',
-          isRead: false,
-        },
-        ...prev,
-      ]);
     };
 
     const handleMachineStatus = (machineData: any) => {
@@ -185,26 +131,6 @@ export default function DashboardScreen() {
     fetchStats();
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
-  const handleNotificationPress = (item: NotificationItem) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
-    );
-    setIsNotificationsOpen(false);
-    if (item.type === 'order') {
-      router.push('/(tabs)/transactions');
-    } else if (item.type === 'telemetry') {
-      router.push('/(tabs)/machine');
-    }
-  };
-
   // Fleet data - persist so dropdown never disappears when selecting a single kiosk
   useEffect(() => {
     if (stats?.ownedKiosks && stats.ownedKiosks.length > 0) {
@@ -216,7 +142,6 @@ export default function DashboardScreen() {
     return <LoadingView message="Loading fleet dashboard..." />;
   }
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
   // Show only 6 recent orders on main dashboard as requested
   const recentSixOrders = (stats?.recentTransactions || []).slice(0, 6);
 
@@ -243,9 +168,6 @@ export default function DashboardScreen() {
         subtitle="Operations overview & live metrics"
         onRefresh={onRefresh}
         isRefreshing={refreshing}
-        showNotificationBell={true}
-        unreadCount={unreadCount}
-        onNotificationPress={() => setIsNotificationsOpen(true)}
       />
 
       <ScrollView
@@ -447,16 +369,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Interactive System Notifications Modal */}
-      <NotificationsModal
-        visible={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
-        onMarkAllAsRead={handleMarkAllAsRead}
-        onClearAll={handleClearAll}
-        onNotificationPress={handleNotificationPress}
-      />
 
       {/* Digital Receipt Modal: Instant, No Page Reload */}
       <DigitalReceiptModal

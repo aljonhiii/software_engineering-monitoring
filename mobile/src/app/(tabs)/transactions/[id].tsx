@@ -16,10 +16,12 @@ import { Transaction } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatting';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { LoadingView } from '../../../components/common/LoadingView';
+import { useNotifications } from '../../../context/NotificationContext';
 
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { unreadCount, openNotifications } = useNotifications();
 
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -93,13 +95,31 @@ export default function TransactionDetailScreen() {
           <Text style={styles.backText}>Transactions</Text>
         </TouchableOpacity>
         <Text style={styles.navTitle}>Digital Receipt</Text>
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={handleShareReceipt}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="share-outline" size={18} color="#0F172A" />
-        </TouchableOpacity>
+        <View style={styles.navRightActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleShareReceipt}
+            activeOpacity={0.7}
+            accessibilityLabel="Share Receipt"
+          >
+            <Ionicons name="share-outline" size={18} color="#0F172A" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={openNotifications}
+            activeOpacity={0.7}
+            accessibilityLabel="Notifications"
+          >
+            <Ionicons name="notifications-outline" size={18} color="#0F172A" />
+            {unreadCount > 0 ? (
+              <View style={styles.bellBadgeCount}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -284,10 +304,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
-  shareBtn: {
+  navRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
     width: 100,
-    alignItems: 'flex-end',
-    paddingRight: 4,
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeCount: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  bellBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   scrollContent: {
     padding: Spacing.lg,

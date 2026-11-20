@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SocketProvider } from '../context/SocketContext';
+import { NotificationProvider } from '../context/NotificationContext';
 import { LoadingView } from '../components/common/LoadingView';
 import { Colors } from '../constants/theme';
 
@@ -67,7 +68,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <SocketProvider>
-          <RootNavigator />
+          <NotificationProvider>
+            <RootNavigator />
+          </NotificationProvider>
         </SocketProvider>
       </AuthProvider>
     </SafeAreaProvider>

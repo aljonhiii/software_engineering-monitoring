@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/theme';
 import { useSocket } from '../../context/SocketContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 interface ScreenHeaderProps {
   title: string;
@@ -22,10 +23,14 @@ export function ScreenHeader({
   onRefresh,
   isRefreshing = false,
   showNotificationBell = true,
-  unreadCount = 0,
+  unreadCount,
   onNotificationPress,
 }: ScreenHeaderProps) {
   const { isConnected } = useSocket();
+  const { unreadCount: ctxUnread, openNotifications } = useNotifications();
+
+  const actualUnread = unreadCount !== undefined ? unreadCount : ctxUnread;
+  const handleBellPress = onNotificationPress || openNotifications;
 
   return (
     <View style={styles.header}>
@@ -69,15 +74,15 @@ export function ScreenHeader({
         {showNotificationBell && (
           <TouchableOpacity
             style={styles.bellBtn}
-            onPress={onNotificationPress || onRefresh}
+            onPress={handleBellPress}
             activeOpacity={0.7}
             accessibilityLabel="Notifications"
           >
             <Ionicons name="notifications-outline" size={18} color="#0F172A" />
-            {unreadCount > 0 ? (
+            {actualUnread > 0 ? (
               <View style={styles.bellBadgeCount}>
                 <Text style={styles.bellBadgeText}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
+                  {actualUnread > 9 ? '9+' : actualUnread}
                 </Text>
               </View>
             ) : null}

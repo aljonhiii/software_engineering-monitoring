@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
+import { useNotifications } from '../../../context/NotificationContext';
 import { getMachineStatusApi } from '../../../api/machineApi';
 import { KioskMachine } from '../../../types';
 import { AppConfig } from '../../../constants/config';
@@ -36,10 +37,15 @@ export default function SettingsScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPass, setIsChangingPass] = useState(false);
 
-  // Notification preferences state
-  const [notifyOrders, setNotifyOrders] = useState(true);
-  const [notifyMachineAlerts, setNotifyMachineAlerts] = useState(true);
-  const [notifyRefills, setNotifyRefills] = useState(true);
+  // Notification preferences state (managed globally)
+  const {
+    notifyOrders,
+    setNotifyOrders,
+    notifyMachineAlerts,
+    setNotifyMachineAlerts,
+    notifyRefills,
+    setNotifyRefills,
+  } = useNotifications();
 
   useEffect(() => {
     let isMounted = true;
