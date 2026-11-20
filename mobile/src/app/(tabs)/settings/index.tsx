@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
+import { getMachineStatusApi } from '../../../api/machineApi';
+import { KioskMachine } from '../../../types';
 import { AppConfig } from '../../../constants/config';
 import { ScreenHeader } from '../../../components/common/ScreenHeader';
 import { Card } from '../../../components/common/Card';
@@ -20,7 +23,11 @@ import { StatusBadge } from '../../../components/common/StatusBadge';
 import { PrimaryButton } from '../../../components/common/PrimaryButton';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { user, logout, changePassword } = useAuth();
+
+  // Kiosks state
+  const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
 
   // Password change form state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -33,6 +40,20 @@ export default function SettingsScreen() {
   const [notifyOrders, setNotifyOrders] = useState(true);
   const [notifyMachineAlerts, setNotifyMachineAlerts] = useState(true);
   const [notifyRefills, setNotifyRefills] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    getMachineStatusApi()
+      .then((res) => {
+        if (isMounted && res.success && Array.isArray(res.kiosks)) {
+          setKiosks(res.kiosks);
+        }
+      })
+      .catch((err) => console.warn('[Settings] Failed to fetch kiosks:', err.message));
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handlePasswordSubmit = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -110,6 +131,59 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
+        </Card>
+
+        {/* Assigned Kiosks & Fleet Terminals Section */}
+        <Text style={styles.sectionHeader}>ASSIGNED KIOSKS & TERMINALS</Text>
+        <Card style={styles.card}>
+          {kiosks.length > 0 ? (
+            kiosks.map((kiosk, idx) => {
+              const statusColor =
+                kiosk.status === 'online'
+                  ? '#10B981'
+                  : kiosk.status === 'busy'
+                  ? '#3B82F6'
+                  : kiosk.status === 'maintenance'
+                  ? '#F59E0B'
+                  : '#94A3B8';
+
+              return (
+                <View key={kiosk.id}>
+                  {idx > 0 && <View style={styles.divider} />}
+                  <View style={styles.kioskRow}>
+                    <View style={styles.kioskInfoCol}>
+                      <View style={styles.kioskHeaderLine}>
+                        <Text style={styles.kioskTitle} numberOfLines={1}>
+                          {kiosk.name}
+                        </Text>
+                        <View style={[styles.statusBadgeDot, { backgroundColor: statusColor }]} />
+                        <Text style={[styles.kioskStatusText, { color: statusColor }]}>
+                          {kiosk.status.toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text style={styles.kioskTerminalId}>Terminal: {kiosk.id}</Text>
+                      <Text style={styles.kioskLocText} numberOfLines={1}>
+                        {kiosk.city || kiosk.location || 'Hub Location'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.viewTxBtn}
+                      onPress={() => router.push(`/(tabs)/transactions?kioskId=${kiosk.id}` as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.viewTxBtnText}>Transactions</Text>
+                      <Ionicons name="arrow-forward" size={12} color="#0284C7" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.emptyKioskBox}>
+              <Ionicons name="storefront-outline" size={24} color="#94A3B8" />
+              <Text style={styles.emptyKioskText}>No kiosks registered to this account.</Text>
+            </View>
+          )}
         </Card>
 
         {/* Security & Password Section */}
@@ -342,6 +416,74 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.cardLarge,
     ...Shadows.small,
   },
+  // Kiosk Fleet Row Styles
+  kioskRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  kioskInfoCol: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  kioskHeaderLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  kioskTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  statusBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  kioskStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  kioskTerminalId: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  kioskLocText: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  viewTxBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  viewTxBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0284C7',
+  },
+  emptyKioskBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    gap: 6,
+  },
+  emptyKioskText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -351,7 +493,7 @@ const styles = StyleSheet.create({
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   menuTitle: {
     fontSize: 13,
@@ -366,7 +508,7 @@ const styles = StyleSheet.create({
   passwordForm: {
     marginTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#F1F5F9',
     paddingTop: Spacing.md,
   },
   inputGroup: {
@@ -376,7 +518,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#64748B',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   input: {

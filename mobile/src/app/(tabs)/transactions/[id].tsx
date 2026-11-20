@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,7 +14,6 @@ import { Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { getTransactionDetailApi } from '../../../api/transactionsApi';
 import { Transaction } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatting';
-import { Card } from '../../../components/common/Card';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { LoadingView } from '../../../components/common/LoadingView';
 
@@ -42,13 +42,27 @@ export default function TransactionDetailScreen() {
     fetchDetail();
   }, [fetchDetail]);
 
+  const handleShareReceipt = async () => {
+    if (!transaction) return;
+    try {
+      await Share.share({
+        title: `Receipt #${transaction.orderId}`,
+        message: `KIXCLEEN OFFICIAL RECEIPT\nOrder: #${transaction.orderId}\nKiosk: ${transaction.kioskName || transaction.kioskId}\nService: ${transaction.serviceName} (${transaction.shoeType})\nTotal: ${formatCurrency(transaction.totalAmount)}\nStatus: ${transaction.paymentStatus.toUpperCase()}\nRef: ${transaction.paymentRef || 'Cash'}\nDate: ${formatDate(transaction.createdAt)}`,
+      });
+    } catch (err: any) {
+      console.warn('Share error:', err.message);
+    }
+  };
+
   if (loading || !transaction) {
-    return <LoadingView message="Loading transaction audit details..." />;
+    return <LoadingView message="Loading digital receipt..." />;
   }
+
+  const subtotal = transaction.basePrice + (transaction.addonsPrice || 0);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Top Navbar */}
+      {/* Top Navigation Bar */}
       <View style={styles.navbar}>
         <TouchableOpacity
           style={styles.backBtn}
@@ -58,107 +72,162 @@ export default function TransactionDetailScreen() {
           <Ionicons name="arrow-back" size={18} color="#0F172A" />
           <Text style={styles.backText}>Transactions</Text>
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Transaction Audit</Text>
-        <View style={{ width: 80 }} />
+        <Text style={styles.navTitle}>Digital Receipt</Text>
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={handleShareReceipt}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="share-outline" size={18} color="#0F172A" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header Summary Card */}
-        <Card style={styles.headerCard}>
-          <View style={styles.orderIdRow}>
-            <View>
-              <Text style={styles.orderIdLabel}>TRANSACTION REFERENCE</Text>
-              <Text style={styles.orderIdValue}>#{transaction.orderId}</Text>
+        {/* Receipt Container */}
+        <View style={styles.receiptContainer}>
+          {/* Receipt Top Header */}
+          <View style={styles.receiptHeader}>
+            <Text style={styles.brandTitle}>KIXCLEEN</Text>
+            <Text style={styles.brandSubtitle}>AUTOMATED SHOE CARE SYSTEM</Text>
+            <View style={styles.receiptTypePill}>
+              <Text style={styles.receiptTypePillText}>OFFICIAL RECEIPT</Text>
             </View>
-            <StatusBadge status={transaction.paymentStatus} type="payment" size="md" />
           </View>
 
-          <Text style={styles.totalAmountValue}>
-            {formatCurrency(transaction.totalAmount)}
-          </Text>
+          {/* Order ID & Time */}
+          <View style={styles.receiptMetaBlock}>
+            <Text style={styles.orderIdLabel}>RECEIPT / ORDER ID</Text>
+            <Text style={styles.orderIdValue}>#{transaction.orderId}</Text>
+            <Text style={styles.dateValue}>{formatDate(transaction.createdAt)}</Text>
+          </View>
 
-          <View style={styles.divider} />
+          {/* Dashed Separator */}
+          <View style={styles.dashedDivider} />
 
-          <View style={styles.statusPillsRow}>
-            <View style={styles.statusCol}>
-              <Text style={styles.miniLabel}>PAYMENT METHOD</Text>
-              <Text style={styles.miniVal}>{transaction.paymentMethod.toUpperCase()}</Text>
+          {/* Kiosk Terminal Information */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTag}>TERMINAL CONTEXT</Text>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Kiosk Machine</Text>
+              <Text style={styles.receiptValueBold}>
+                {transaction.kioskName || transaction.kioskId}
+              </Text>
             </View>
-            <View style={styles.statusCol}>
-              <Text style={styles.miniLabel}>CLEANING CYCLE</Text>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Terminal ID</Text>
+              <Text style={[styles.receiptValue, styles.monoText]}>
+                {transaction.kioskId}
+              </Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Location</Text>
+              <Text style={styles.receiptValue}>
+                {transaction.kioskLocation || 'Ground Floor Lobby'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Dashed Separator */}
+          <View style={styles.dashedDivider} />
+
+          {/* Cleaning Service Specifications */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTag}>CLEANING SPECIFICATIONS</Text>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Shoe Category</Text>
+              <Text style={styles.receiptValueBold}>{transaction.shoeType}</Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Cleaning Service</Text>
+              <Text style={styles.receiptValueBold}>{transaction.serviceName}</Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Base Service Price</Text>
+              <Text style={styles.receiptValue}>{formatCurrency(transaction.basePrice)}</Text>
+            </View>
+
+            {/* Add-ons itemization */}
+            {transaction.addons && transaction.addons.length > 0 && (
+              <View style={styles.addonsListBlock}>
+                <Text style={styles.addonsHeading}>Selected Add-ons:</Text>
+                {transaction.addons.map((addon, idx) => (
+                  <View key={idx} style={styles.addonItemRow}>
+                    <Text style={styles.addonItemName}>+ {addon.name}</Text>
+                    <Text style={styles.addonItemPrice}>+{formatCurrency(addon.price)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={[styles.receiptRow, { marginTop: 6 }]}>
+              <Text style={styles.receiptLabel}>Subtotal</Text>
+              <Text style={styles.receiptValue}>{formatCurrency(subtotal)}</Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Convenience / Platform Fee</Text>
+              <Text style={styles.receiptValue}>₱0.00</Text>
+            </View>
+          </View>
+
+          {/* Double Dashed Separator for Total */}
+          <View style={styles.doubleDashedDivider} />
+
+          {/* Total Paid Block */}
+          <View style={styles.totalBlock}>
+            <Text style={styles.totalLabel}>TOTAL AMOUNT PAID</Text>
+            <Text style={styles.totalValue}>{formatCurrency(transaction.totalAmount)}</Text>
+          </View>
+
+          {/* Double Dashed Separator */}
+          <View style={styles.doubleDashedDivider} />
+
+          {/* Payment & Wash Cycle Audit */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTag}>PAYMENT & AUDIT VERIFICATION</Text>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Payment Channel</Text>
+              <Text style={styles.receiptValueBold}>
+                {transaction.paymentMethod.toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Payment Status</Text>
+              <StatusBadge status={transaction.paymentStatus} type="payment" size="sm" />
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Reference No.</Text>
+              <Text style={[styles.receiptValue, styles.monoText]}>
+                {transaction.paymentRef || 'N/A (Cash Deposit)'}
+              </Text>
+            </View>
+            <View style={styles.receiptRow}>
+              <Text style={styles.receiptLabel}>Wash Cycle Status</Text>
               <StatusBadge status={transaction.cleaningStatus} type="cleaning" size="sm" />
             </View>
-          </View>
-        </Card>
-
-        {/* Shoe & Service Specs */}
-        <Text style={styles.sectionHeader}>SERVICE SPECIFICATIONS</Text>
-        <Card style={styles.detailsCard}>
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Shoe Type</Text>
-            <Text style={styles.specValue}>{transaction.shoeType}</Text>
+            {transaction.completedAt && (
+              <View style={styles.receiptRow}>
+                <Text style={styles.receiptLabel}>Cycle Finished</Text>
+                <Text style={styles.receiptValue}>{formatDate(transaction.completedAt)}</Text>
+              </View>
+            )}
           </View>
 
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Service Tier</Text>
-            <Text style={styles.specValue}>{transaction.serviceName}</Text>
-          </View>
+          {/* Dashed Separator */}
+          <View style={styles.dashedDivider} />
 
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Base Service Price</Text>
-            <Text style={styles.specValue}>{formatCurrency(transaction.basePrice)}</Text>
-          </View>
-
-          {transaction.addons && transaction.addons.length > 0 && (
-            <>
-              <View style={styles.subDivider} />
-              <Text style={styles.addonsHeader}>Selected Add-ons:</Text>
-              {transaction.addons.map((addon, idx) => (
-                <View key={idx} style={styles.addonItemRow}>
-                  <Text style={styles.addonName}>{addon.name}</Text>
-                  <Text style={styles.addonPrice}>+{formatCurrency(addon.price)}</Text>
-                </View>
-              ))}
-            </>
-          )}
-        </Card>
-
-        {/* Audit & Kiosk Machine Information */}
-        <Text style={styles.sectionHeader}>MACHINE AUDIT & LOCATION</Text>
-        <Card style={styles.detailsCard}>
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Kiosk Machine</Text>
-            <Text style={styles.specValue}>
-              {transaction.kioskName || transaction.kioskId}
+          {/* Receipt Footer / Barcode Effect */}
+          <View style={styles.receiptFooter}>
+            <Text style={styles.barcodeText}>
+              * K I X - {transaction.orderId.replace(/[^0-9]/g, '').slice(-8) || '20261109'} *
+            </Text>
+            <Text style={styles.footerNote}>
+              Thank you for trusting KixCleen Automated Shoe Care!
+            </Text>
+            <Text style={styles.footerSubNote}>
+              Automated telemetry recorded • Valid audit proof
             </Text>
           </View>
-
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Location</Text>
-            <Text style={styles.specValue}>
-              {transaction.kioskLocation || 'Ground Floor Lobby'}
-            </Text>
-          </View>
-
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Payment Reference</Text>
-            <Text style={[styles.specValue, styles.monoValue]}>
-              {transaction.paymentRef || 'N/A (Cash)'}
-            </Text>
-          </View>
-
-          <View style={styles.specRow}>
-            <Text style={styles.specLabel}>Order Created</Text>
-            <Text style={styles.specValue}>{formatDate(transaction.createdAt)}</Text>
-          </View>
-
-          {transaction.completedAt && (
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Cycle Completed</Text>
-              <Text style={styles.specValue}>{formatDate(transaction.completedAt)}</Text>
-            </View>
-          )}
-        </Card>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -167,7 +236,7 @@ export default function TransactionDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
   navbar: {
     flexDirection: 'row',
@@ -195,131 +264,190 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  shareBtn: {
+    width: 100,
+    alignItems: 'flex-end',
+    paddingRight: 4,
+  },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: 60,
+    alignItems: 'center',
   },
-  headerCard: {
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
+  receiptContainer: {
+    width: '100%',
+    maxWidth: 420,
     backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.cardLarge,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: BorderRadius.md,
-    ...Shadows.small,
+    ...Shadows.medium,
   },
-  orderIdRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  receiptHeader: {
+    alignItems: 'center',
+    paddingBottom: Spacing.sm,
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: '#0F172A',
+  },
+  brandSubtitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  receiptTypePill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.pill,
+    marginTop: 8,
+  },
+  receiptTypePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#334155',
+    letterSpacing: 0.5,
+  },
+  receiptMetaBlock: {
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
   },
   orderIdLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#94A3B8',
     letterSpacing: 0.5,
   },
   orderIdValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
     fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  totalAmountValue: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 10,
-    letterSpacing: -0.5,
+    marginTop: 2,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
+  dateValue: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 3,
+  },
+  dashedDivider: {
+    borderBottomWidth: 1,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
     marginVertical: Spacing.md,
   },
-  statusPillsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  doubleDashedDivider: {
+    borderBottomWidth: 2,
+    borderColor: '#0F172A',
+    borderStyle: 'dashed',
+    marginVertical: Spacing.md,
   },
-  statusCol: {
-    gap: 4,
+  sectionBlock: {
+    gap: 7,
   },
-  miniLabel: {
+  sectionTag: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#64748B',
-    letterSpacing: 0.4,
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
-  miniVal: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  sectionHeader: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  detailsCard: {
-    marginBottom: Spacing.md,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    ...Shadows.small,
-  },
-  specRow: {
+  receiptRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
-  specLabel: {
-    fontSize: 13,
+  receiptLabel: {
+    fontSize: 12,
     color: '#64748B',
   },
-  specValue: {
-    fontSize: 13,
+  receiptValue: {
+    fontSize: 12,
     color: '#0F172A',
-    fontWeight: '600',
+    textAlign: 'right',
   },
-  monoValue: {
+  receiptValueBold: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'right',
+  },
+  monoText: {
     fontFamily: 'monospace',
-    color: '#0284C7',
-  },
-  subDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: Spacing.sm,
-  },
-  addonsHeader: {
-    fontSize: 11,
-    color: '#64748B',
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 6,
+  },
+  addonsListBlock: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    marginTop: 4,
+    marginBottom: 4,
+    gap: 4,
+  },
+  addonsHeading: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
   },
   addonItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingLeft: 6,
   },
-  addonName: {
-    fontSize: 13,
-    color: '#334155',
+  addonItemName: {
+    fontSize: 11,
+    color: '#64748B',
   },
-  addonPrice: {
-    fontSize: 13,
-    color: '#0F172A',
+  addonItemPrice: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#0F172A',
+  },
+  totalBlock: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  totalLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 1,
+  },
+  totalValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+    marginTop: 4,
+  },
+  receiptFooter: {
+    alignItems: 'center',
+    paddingTop: Spacing.xs,
+    gap: 4,
+  },
+  barcodeText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    letterSpacing: 4,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginVertical: 4,
+  },
+  footerNote: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+    textAlign: 'center',
+  },
+  footerSubNote: {
+    fontSize: 10,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });

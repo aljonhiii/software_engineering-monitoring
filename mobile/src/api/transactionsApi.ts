@@ -4,6 +4,7 @@ import { Transaction } from '../types';
 export interface TransactionFilterParams {
   paymentStatus?: string;
   cleaningStatus?: string;
+  kioskId?: string;
   search?: string;
   page?: number;
   limit?: number;
@@ -15,6 +16,7 @@ export async function getTransactionsApi(
   const query = new URLSearchParams();
   if (filters.paymentStatus) query.append('paymentStatus', filters.paymentStatus);
   if (filters.cleaningStatus) query.append('cleaningStatus', filters.cleaningStatus);
+  if (filters.kioskId) query.append('kioskId', filters.kioskId);
   if (filters.search) query.append('search', filters.search);
   if (filters.page) query.append('page', String(filters.page));
   if (filters.limit) query.append('limit', String(filters.limit));

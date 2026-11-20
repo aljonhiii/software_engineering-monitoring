@@ -86,7 +86,7 @@ export interface DashboardStats {
   waterLevelPercent: number;
   soapLevelPercent: number;
   lastHeartbeat?: string | null;
-  recentTransactions: Array<{
+  recentTransactions: {
     id: string;
     orderId: string;
     kioskId?: string;
@@ -98,14 +98,14 @@ export interface DashboardStats {
     paymentStatus: string;
     cleaningStatus: string;
     createdAt: string;
-  }>;
-  activities: Array<{
+  }[];
+  activities: {
     id: string;
     type: string;
     title: string;
     time: string;
     kioskName?: string;
-  }>;
+  }[];
   // Multi-kiosk fleet data
   ownedKiosks?: KioskSummary[];
   fleetHealth?: FleetHealth;
@@ -160,7 +160,7 @@ export interface SalesReport {
   };
   chart: {
     labels: string[];
-    datasets: Array<{ data: number[] }>;
+    datasets: { data: number[] }[];
   };
   breakdowns: {
     byShoeType: Record<string, number>;

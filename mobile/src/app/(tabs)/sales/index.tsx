@@ -6,11 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { getSalesReportsApi } from '../../../api/salesApi';
-import { SalesReport } from '../../../types';
+import { getMachineStatusApi } from '../../../api/machineApi';
+import { SalesReport, KioskMachine } from '../../../types';
 import { formatCurrency } from '../../../utils/formatting';
 import { ScreenHeader } from '../../../components/common/ScreenHeader';
 import { Card } from '../../../components/common/Card';
@@ -23,9 +27,29 @@ export default function SalesScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
+  // Kiosk filter state
+  const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
+  const [selectedKioskId, setSelectedKioskId] = useState<string | null>(null); // null = All Kiosks
+  const [isKioskPickerOpen, setIsKioskPickerOpen] = useState<boolean>(false);
+
+  // Fetch available kiosks for filtering
+  useEffect(() => {
+    let isMounted = true;
+    getMachineStatusApi()
+      .then((res) => {
+        if (isMounted && res.success && Array.isArray(res.kiosks)) {
+          setKiosks(res.kiosks);
+        }
+      })
+      .catch((err) => console.warn('[Sales] Kiosks load error:', err.message));
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const fetchReports = useCallback(async () => {
     try {
-      const res = await getSalesReportsApi(period);
+      const res = await getSalesReportsApi(period, selectedKioskId);
       if (res && res.summary) {
         setReport(res);
       }
@@ -35,7 +59,7 @@ export default function SalesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [period]);
+  }, [period, selectedKioskId]);
 
   useEffect(() => {
     fetchReports();
@@ -45,6 +69,10 @@ export default function SalesScreen() {
     setRefreshing(true);
     fetchReports();
   };
+
+  const selectedKioskName = selectedKioskId
+    ? (kiosks.find((k) => k.id === selectedKioskId)?.name || selectedKioskId)
+    : 'All Kiosks';
 
   if (loading && !report) {
     return <LoadingView message="Calculating revenue and sales analytics..." />;
@@ -70,6 +98,32 @@ export default function SalesScreen() {
           />
         }
       >
+        {/* Kiosk Dropdown Filter Button */}
+        {kiosks.length > 1 && (
+          <View style={styles.kioskFilterRow}>
+            <TouchableOpacity
+              style={styles.kioskDropdownBtn}
+              onPress={() => setIsKioskPickerOpen(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="storefront-outline" size={14} color="#0284C7" />
+              <Text style={styles.kioskDropdownLabel} numberOfLines={1}>
+                {selectedKioskName}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#64748B" />
+            </TouchableOpacity>
+            {selectedKioskId && (
+              <TouchableOpacity
+                style={styles.clearKioskFilterBtn}
+                onPress={() => setSelectedKioskId(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.clearKioskFilterText}>Reset to All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Period Selector Tabs */}
         <View style={styles.periodRow}>
           {(['day', 'week', 'month'] as const).map((p) => {
@@ -184,6 +238,97 @@ export default function SalesScreen() {
           )}
         </Card>
       </ScrollView>
+
+      {/* Kiosk Selection Modal */}
+      <Modal
+        visible={isKioskPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsKioskPickerOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsKioskPickerOpen(false)}>
+          <View style={styles.pickerModal}>
+            <Text style={styles.pickerTitle}>FILTER BY KIOSK</Text>
+
+            {/* All Kiosks (Default) */}
+            <TouchableOpacity
+              style={[
+                styles.pickerOption,
+                !selectedKioskId && styles.pickerOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedKioskId(null);
+                setIsKioskPickerOpen(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="layers-outline"
+                size={18}
+                color={!selectedKioskId ? '#0284C7' : '#64748B'}
+              />
+              <View style={styles.pickerOptionInfo}>
+                <Text
+                  style={[
+                    styles.pickerOptionName,
+                    !selectedKioskId && styles.pickerOptionTextActive,
+                  ]}
+                >
+                  All Kiosks (Aggregate)
+                </Text>
+                <Text style={styles.pickerOptionSub}>
+                  Combined revenue across {kiosks.length} units
+                </Text>
+              </View>
+              {!selectedKioskId && (
+                <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+              )}
+            </TouchableOpacity>
+
+            {/* Individual Kiosks */}
+            {kiosks.map((k) => {
+              const isSelected = selectedKioskId === k.id;
+              return (
+                <TouchableOpacity
+                  key={k.id}
+                  style={[
+                    styles.pickerOption,
+                    isSelected && styles.pickerOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedKioskId(k.id);
+                    setIsKioskPickerOpen(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="storefront-outline"
+                    size={18}
+                    color={isSelected ? '#0284C7' : '#64748B'}
+                  />
+                  <View style={styles.pickerOptionInfo}>
+                    <Text
+                      style={[
+                        styles.pickerOptionName,
+                        isSelected && styles.pickerOptionTextActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {k.name}
+                    </Text>
+                    <Text style={styles.pickerOptionSub} numberOfLines={1}>
+                      {k.city || k.location || k.id}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -196,6 +341,38 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingBottom: 110,
+  },
+  kioskFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  kioskDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxWidth: '75%',
+  },
+  kioskDropdownLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  clearKioskFilterBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clearKioskFilterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0284C7',
   },
   periodRow: {
     flexDirection: 'row',
@@ -308,5 +485,61 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginVertical: Spacing.md,
+  },
+  // Modal Picker Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  pickerModal: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.cardLarge,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Shadows.medium,
+  },
+  pickerTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.md,
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.md,
+    marginBottom: 4,
+    gap: Spacing.sm,
+  },
+  pickerOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  pickerOptionInfo: {
+    flex: 1,
+  },
+  pickerOptionName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  pickerOptionTextActive: {
+    color: '#0284C7',
+    fontWeight: '700',
+  },
+  pickerOptionSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
   },
 });

@@ -7,15 +7,18 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../../../constants/theme';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../../constants/theme';
 import { useSocket } from '../../../context/SocketContext';
 import { useAuth } from '../../../context/AuthContext';
 import { getTransactionsApi } from '../../../api/transactionsApi';
-import { Transaction } from '../../../types';
+import { getMachineStatusApi } from '../../../api/machineApi';
+import { Transaction, KioskMachine } from '../../../types';
 import { ScreenHeader } from '../../../components/common/ScreenHeader';
 import { RecentTransactionCard } from '../../../components/dashboard/RecentTransactionCard';
 import { LoadingView } from '../../../components/common/LoadingView';
@@ -24,6 +27,7 @@ const STATUS_FILTERS = ['All', 'Paid', 'Pending', 'Failed'];
 
 export default function TransactionsListScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ kioskId?: string }>();
   const { socket } = useSocket();
   const { user } = useAuth();
 
@@ -33,11 +37,39 @@ export default function TransactionsListScreen() {
   const [search, setSearch] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
+  // Kiosk dropdown filter state (default is null = "All Kiosks")
+  const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
+  const [selectedKioskId, setSelectedKioskId] = useState<string | null>(params.kioskId || null);
+  const [isKioskPickerOpen, setIsKioskPickerOpen] = useState<boolean>(false);
+
+  // Sync selectedKioskId if route param changes
+  useEffect(() => {
+    if (params.kioskId) {
+      setSelectedKioskId(params.kioskId);
+    }
+  }, [params.kioskId]);
+
+  // Load available kiosks for filtering
+  useEffect(() => {
+    let isMounted = true;
+    getMachineStatusApi()
+      .then((res) => {
+        if (isMounted && res.success && Array.isArray(res.kiosks)) {
+          setKiosks(res.kiosks);
+        }
+      })
+      .catch((err) => console.warn('[Transactions] Kiosks load error:', err.message));
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const fetchTransactions = useCallback(async () => {
     try {
       const res = await getTransactionsApi({
         search: search.trim() || undefined,
         paymentStatus: selectedStatus !== 'All' ? selectedStatus.toLowerCase() : undefined,
+        kioskId: selectedKioskId || undefined,
         limit: 100,
       });
       if (res.success && res.transactions) {
@@ -49,7 +81,7 @@ export default function TransactionsListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [search, selectedStatus]);
+  }, [search, selectedStatus, selectedKioskId]);
 
   useEffect(() => {
     fetchTransactions();
@@ -72,6 +104,11 @@ export default function TransactionsListScreen() {
         return;
       }
 
+      // If filtering by specific kiosk, ignore other kiosks
+      if (selectedKioskId && txKioskId && txKioskId !== selectedKioskId) {
+        return;
+      }
+
       setTransactions((prev) => {
         const orderId = newTx.order_id || newTx.orderId;
         const exists = prev.some((t) => t.orderId === orderId);
@@ -80,6 +117,8 @@ export default function TransactionsListScreen() {
           id: newTx.id,
           orderId,
           kioskId: newTx.kiosk_id || newTx.kioskId,
+          kioskName: newTx.kiosk_name || newTx.kioskName,
+          kioskLocation: newTx.kiosk_location || newTx.kioskLocation,
           shoeType: newTx.shoe_type || newTx.shoeType,
           serviceTier: newTx.service_tier || newTx.serviceTier,
           serviceName: newTx.service_name || newTx.serviceName,
@@ -121,24 +160,28 @@ export default function TransactionsListScreen() {
       socket.off('transaction:new', handleNewTx);
       socket.off('transaction:updated', handleUpdatedTx);
     };
-  }, [socket]);
+  }, [socket, user, selectedKioskId]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchTransactions();
   };
 
+  const selectedKiosk = kiosks.find((k) => k.id === selectedKioskId);
+  const kioskDropdownLabel = selectedKiosk ? selectedKiosk.name : 'All Kiosks';
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScreenHeader
         title="Transactions"
-        subtitle={`${transactions.length} records`}
+        subtitle={`${transactions.length} record${transactions.length === 1 ? '' : 's'}${selectedKioskId ? ` • ${kioskDropdownLabel}` : ''}`}
         onRefresh={onRefresh}
         isRefreshing={refreshing}
       />
 
       {/* Search & Filter Header */}
       <View style={styles.searchContainer}>
+        {/* Search Bar */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={16} color="#94A3B8" />
           <TextInput
@@ -152,6 +195,31 @@ export default function TransactionsListScreen() {
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
               <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Kiosk Dropdown Bar */}
+        <View style={styles.filterControlRow}>
+          <TouchableOpacity
+            style={styles.kioskDropdownBtn}
+            onPress={() => setIsKioskPickerOpen(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="storefront-outline" size={14} color="#0284C7" />
+            <Text style={styles.kioskDropdownText} numberOfLines={1}>
+              {kioskDropdownLabel}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color="#64748B" />
+          </TouchableOpacity>
+
+          {selectedKioskId && (
+            <TouchableOpacity
+              style={styles.resetFilterBtn}
+              onPress={() => setSelectedKioskId(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.resetFilterText}>Clear Filter</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -202,6 +270,7 @@ export default function TransactionsListScreen() {
               paymentStatus={item.paymentStatus}
               cleaningStatus={item.cleaningStatus}
               createdAt={item.createdAt}
+              kioskName={item.kioskName || (kiosks.find((k) => k.id === item.kioskId)?.name)}
               onPress={() => router.push(`/(tabs)/transactions/${item.orderId}` as any)}
             />
           )}
@@ -210,12 +279,107 @@ export default function TransactionsListScreen() {
               <Ionicons name="filter-outline" size={32} color="#94A3B8" />
               <Text style={styles.emptyTitle}>No matching transactions</Text>
               <Text style={styles.emptySub}>
-                Adjust search keywords or filter criteria.
+                {selectedKioskId
+                  ? `No records found for ${kioskDropdownLabel}. Try selecting "All Kiosks".`
+                  : 'Adjust search keywords or filter criteria.'}
               </Text>
             </View>
           }
         />
       )}
+
+      {/* Kiosk Dropdown Modal Picker */}
+      <Modal
+        visible={isKioskPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsKioskPickerOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsKioskPickerOpen(false)}>
+          <View style={styles.pickerModal}>
+            <Text style={styles.pickerModalTitle}>SELECT KIOSK</Text>
+
+            {/* All Kiosks (Default) */}
+            <TouchableOpacity
+              style={[
+                styles.pickerOption,
+                !selectedKioskId && styles.pickerOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedKioskId(null);
+                setIsKioskPickerOpen(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="layers-outline"
+                size={18}
+                color={!selectedKioskId ? '#0284C7' : '#64748B'}
+              />
+              <View style={styles.pickerOptionInfo}>
+                <Text
+                  style={[
+                    styles.pickerOptionName,
+                    !selectedKioskId && styles.pickerOptionTextActive,
+                  ]}
+                >
+                  All Kiosks (Default)
+                </Text>
+                <Text style={styles.pickerOptionSub}>
+                  Show transactions from all {kiosks.length} units
+                </Text>
+              </View>
+              {!selectedKioskId && (
+                <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+              )}
+            </TouchableOpacity>
+
+            {/* Individual Kiosks */}
+            {kiosks.map((k) => {
+              const isSelected = selectedKioskId === k.id;
+              const statusColor =
+                k.status === 'online' ? '#10B981'
+                : k.status === 'busy' ? '#3B82F6'
+                : k.status === 'maintenance' ? '#F59E0B'
+                : '#94A3B8';
+
+              return (
+                <TouchableOpacity
+                  key={k.id}
+                  style={[
+                    styles.pickerOption,
+                    isSelected && styles.pickerOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedKioskId(k.id);
+                    setIsKioskPickerOpen(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                  <View style={styles.pickerOptionInfo}>
+                    <Text
+                      style={[
+                        styles.pickerOptionName,
+                        isSelected && styles.pickerOptionTextActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {k.name}
+                    </Text>
+                    <Text style={styles.pickerOptionSub} numberOfLines={1}>
+                      {k.city || k.location || k.id}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -229,7 +393,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 0,
     gap: Spacing.sm,
   },
   searchBar: {
@@ -240,25 +403,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingHorizontal: Spacing.md,
-    height: 44,
+    height: 42,
     gap: Spacing.sm,
+    ...Shadows.small,
   },
   searchInput: {
     flex: 1,
     color: '#0F172A',
     fontSize: 13,
   },
+  filterControlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  kioskDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: BorderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxWidth: '75%',
+  },
+  kioskDropdownText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  resetFilterBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  resetFilterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0284C7',
+  },
   chipsRow: {
     flexDirection: 'row',
-    gap: Spacing.xs + 2,
+    gap: Spacing.xs,
   },
   chip: {
-    paddingHorizontal: 14,
+    flex: 1,
     paddingVertical: 6,
     borderRadius: BorderRadius.pill,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    alignItems: 'center',
   },
   chipActive: {
     backgroundColor: '#0F172A',
@@ -273,23 +469,86 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   listContent: {
-    padding: Spacing.lg,
-    paddingBottom: 110, // Extra clearance for floating dock
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 110,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xxl,
+    gap: Spacing.xs,
   },
   emptyTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0F172A',
     marginTop: Spacing.sm,
   },
   emptySub: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 4,
+    textAlign: 'center',
+    maxWidth: 240,
+  },
+  // Modal Picker Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  pickerModal: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.cardLarge,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Shadows.medium,
+  },
+  pickerModalTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.md,
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.md,
+    marginBottom: 4,
+    gap: Spacing.sm,
+  },
+  pickerOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pickerOptionInfo: {
+    flex: 1,
+  },
+  pickerOptionName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  pickerOptionTextActive: {
+    color: '#0284C7',
+    fontWeight: '700',
+  },
+  pickerOptionSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
   },
 });
