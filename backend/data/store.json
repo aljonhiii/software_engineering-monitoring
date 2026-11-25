@@ -1,20 +1,20 @@
 {
   "users": [
     {
-      "id": "USR-BUYER-527384",
-      "username": "test1234",
+      "id": "USR-BUYER-182349",
+      "username": "sampletester",
       "email": "callmejownas@gmail.com",
-      "password_hash": "$2a$10$ETqtdsIvk0QYOhVPWiX6.eV8926WdhuxZNXKOczdmpwqlqDlKzl6C",
-      "full_name": "test1234",
-      "phone": "09876789091",
-      "company_name": "test1234",
+      "password_hash": "$2a$10$KJuLifxxGYR67xmxC/qK0eyRBdnJWTYAho3k7v6s5TqczjffqvD2O",
+      "full_name": "sample",
+      "phone": "09123423123",
+      "company_name": "samplecompany",
       "role": "buyer",
       "is_active": 1,
       "account_status": "active",
       "invite_token_hash": null,
       "invite_expires_at": null,
-      "created_at": "2026-11-20T14:55:27.385Z",
-      "updated_at": "2026-11-20T14:56:32.686Z",
+      "created_at": "2026-11-22T14:03:02.349Z",
+      "updated_at": "2026-11-22T14:05:12.951Z",
       "onboarding_completed": 1
     },
     {
@@ -710,13 +710,13 @@
       "operating_hours": "10:00 AM - 10:00 PM Daily",
       "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
       "door_locked": 0,
-      "water_level_pct": 89,
+      "water_level_pct": 88,
       "soap_level_pct": 93,
       "current_order_id": null,
       "current_activity": "Idle - Ready for customer",
-      "last_heartbeat": "2026-11-13T09:43:27.326Z",
+      "last_heartbeat": "2026-11-22T14:08:28.410Z",
       "created_at": "2026-10-28T17:49:54.310Z",
-      "updated_at": "2026-11-13T14:32:29.348Z"
+      "updated_at": "2026-11-22T14:08:28.410Z"
     },
     {
       "id": "KIOSK-02-BGC",
@@ -1659,9 +1659,39 @@
       "created_at": "2026-11-20T14:55:27.385Z",
       "updated_at": "2026-11-20T14:58:09.877Z",
       "current_order_id": "KIX-20261120-2051"
+    },
+    {
+      "id": "KIOSK-SAMPLETESTER-01",
+      "name": "KixCleen Vendo — sample Branch",
+      "city": "Zamboanga City",
+      "address": "Detected Current Position",
+      "location": "Detected Current Position, Brgy. Canelar",
+      "status": "online",
+      "is_active": 1,
+      "is_public": 1,
+      "operating_hours": "8:00 AM - 10:00 PM Daily",
+      "services_offered": "Sanitation, Disinfection, Deodorize, UV Light Bacterial Removal, Dryer",
+      "door_locked": 0,
+      "water_level_pct": 89,
+      "soap_level_pct": 93,
+      "current_activity": "Idle - Ready for customer",
+      "latitude": 6.921631,
+      "longitude": 122.0810374,
+      "last_heartbeat": "2026-11-22T14:08:32.355Z",
+      "created_at": "2026-11-22T14:03:02.349Z",
+      "updated_at": "2026-11-22T14:08:32.355Z",
+      "current_order_id": null
     }
   ],
   "kiosk_owners": [
+    {
+      "id": 1795352492971,
+      "kiosk_id": "KIOSK-01-MAIN",
+      "buyer_id": "USR-BUYER-182349",
+      "assigned_by": "USR-000-SUPERADMIN",
+      "notes": "Primary flagship kiosk unit assigned to Sample Owner",
+      "assigned_at": "2026-11-22T14:05:12.951Z"
+    },
     {
       "id": 1,
       "kiosk_id": "KIOSK-01-MAIN",
@@ -1975,20 +2005,12 @@
       "assigned_at": "2026-11-13T14:35:30.864Z"
     },
     {
-      "id": 1795186528119,
-      "kiosk_id": "KIOSK-TEST1234-01",
-      "buyer_id": "USR-BUYER-527384",
+      "id": 1795356182924,
+      "kiosk_id": "KIOSK-SAMPLETESTER-01",
+      "buyer_id": "USR-BUYER-182349",
       "assigned_by": "USR-000-SUPERADMIN",
       "notes": "Dedicated kiosk assigned on owner onboarding",
-      "assigned_at": "2026-11-20T14:55:27.385Z"
-    },
-    {
-      "id": 1795186528270,
-      "kiosk_id": "KIOSK-TEST1234-02",
-      "buyer_id": "USR-BUYER-527384",
-      "assigned_by": "USR-000-SUPERADMIN",
-      "notes": "Dedicated kiosk assigned on owner onboarding",
-      "assigned_at": "2026-11-20T14:55:27.385Z"
+      "assigned_at": "2026-11-22T14:05:12.951Z"
     }
   ],
   "machine_status": [
@@ -1996,13 +2018,13 @@
       "kiosk_id": "KIOSK-01-MAIN",
       "status": "online",
       "door_locked": 0,
-      "water_level_pct": 89,
+      "water_level_pct": 88,
       "soap_level_pct": 93,
       "current_order_id": null,
       "current_activity": "Idle - Ready for customer",
       "error_code": null,
-      "last_heartbeat": "2026-11-13T09:43:27.326Z",
-      "updated_at": "2026-11-13T09:43:27.326Z"
+      "last_heartbeat": "2026-11-22T14:08:28.410Z",
+      "updated_at": "2026-11-22T14:08:28.410Z"
     },
     {
       "kiosk_id": "KIOSK-02-BGC",
@@ -2531,9 +2553,59 @@
       "error_code": null,
       "last_heartbeat": "2026-11-20T14:58:09.877Z",
       "updated_at": "2026-11-20T14:58:09.877Z"
+    },
+    {
+      "kiosk_id": "KIOSK-SAMPLETESTER-01",
+      "status": "online",
+      "door_locked": 0,
+      "water_level_pct": 89,
+      "soap_level_pct": 93,
+      "current_order_id": null,
+      "current_activity": "Idle - Ready for customer",
+      "error_code": null,
+      "last_heartbeat": "2026-11-22T14:08:32.355Z",
+      "updated_at": "2026-11-22T14:08:32.355Z"
     }
   ],
   "transactions": [
+    {
+      "id": "TX-1795356487320",
+      "order_id": "KIX-20261122-8461",
+      "kiosk_id": "KIOSK-01-MAIN",
+      "shoe_type": "Other Shoes",
+      "service_tier": "disinfection",
+      "service_name": "Disinfection",
+      "addons": "[{\"id\":\"uv-bacterial\",\"name\":\"UV Light Bacterial Removal\",\"price\":25}]",
+      "base_price": 50,
+      "addons_price": 25,
+      "total_amount": 75,
+      "payment_method": "bills",
+      "payment_status": "paid",
+      "payment_ref": "KIX-20261122-2382",
+      "cleaning_status": "completed",
+      "started_at": "2026-11-22T14:08:07.323Z",
+      "completed_at": "2026-11-22T14:08:27.713Z",
+      "created_at": "2026-11-22T14:08:07.323Z"
+    },
+    {
+      "id": "TX-1795356476328",
+      "order_id": "KIX-20261122-2736",
+      "kiosk_id": "KIOSK-SAMPLETESTER-01",
+      "shoe_type": "Other Shoes",
+      "service_tier": "sanitation",
+      "service_name": "Sanitation",
+      "addons": "[{\"id\":\"dryer\",\"name\":\"Dryer\",\"price\":20}]",
+      "base_price": 30,
+      "addons_price": 20,
+      "total_amount": 50,
+      "payment_method": "bills",
+      "payment_status": "paid",
+      "payment_ref": "KIX-20261122-8442",
+      "cleaning_status": "completed",
+      "started_at": "2026-11-22T14:07:56.331Z",
+      "completed_at": "2026-11-22T14:08:25.043Z",
+      "created_at": "2026-11-22T14:07:56.331Z"
+    },
     {
       "id": "TX-1795195078863",
       "order_id": "KIX-20261120-7092",
